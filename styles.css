@@ -238,7 +238,12 @@ html, body {
 .part-zone .part-list { font-size: 12px; color: var(--text-dim); margin: 4px 0 2px; }
 .part-zone .part-form { display: flex; gap: 6px; margin-top: 6px; }
 .part-zone .part-form input { flex: 1; min-width: 0; }
-.part-zone .part-form select { flex: 1; min-width: 0; }
+.part-zone .part-apports {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 2px 12px; margin-top: 6px;
+  font-size: 12px; color: var(--text-dim);
+}
+.part-zone .part-apports label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
 .part-zone .part-form input[data-part-nb] { flex: 0 0 52px; }
 .part-zone .part-row { display: flex; align-items: center; gap: 6px; }
 .part-zone .part-del { padding: 1px 7px; font-size: 11px; }

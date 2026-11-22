@@ -621,7 +621,7 @@ function adminsRow(email, removable) {
 }
 
 const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🪮 râteau', bache: '🥅 bâche', filet: '🥅 filet' };
+const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🪮 râteau', filet: '🥅 filet', bache: '🟦 bâche', deux: '🪜 🧺' };
 
 async function loadParticipations(id, zone, quand) {
   if (!sb) return;
@@ -634,7 +634,9 @@ async function loadParticipations(id, zone, quand) {
     const del = isAdminUser
       ? ` <button type="button" class="mini no part-del" data-pid="${r.id}" title="Retirer ce volontaire">✕</button>`
       : '';
-    return `<div class="part-row">· <b>${esc(r.pseudo)}</b> (${r.nb_personnes})${r.apporte ? ` — ${APPORT_LABELS[r.apporte] || esc(r.apporte)}` : ''}${del}</div>`;
+    const ap = String(r.apporte || '').split(',').map((t) => t.trim()).filter(Boolean)
+      .map((t) => APPORT_LABELS[t] || esc(t)).join(' + ');
+    return `<div class="part-row">· <b>${esc(r.pseudo)}</b> (${r.nb_personnes})${ap ? ` — ${ap}` : ''}${del}</div>`;
   }).join('');
   const me = localStorage.getItem('olivemap_pseudo') || '';
   zone.innerHTML = `
@@ -642,16 +644,16 @@ async function loadParticipations(id, zone, quand) {
     ${list ? `<div class="part-list">${list}</div>` : ''}
     <div class="part-form">
       <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
-      <select data-part-apporte>
-        <option value="">de rien</option>
-        <option value="echelle">🪜 échelle</option>
-        <option value="caisses">🧺 caisses</option>
-        <option value="rateau">🪮 râteau</option>
-        <option value="bache">🥅 bâche</option>
-        <option value="filet">🥅 filet</option>
-      </select>
       <input data-part-nb type="number" min="1" max="50" value="1" />
       <button type="button" class="mini ok" data-part-go>🙋 Je viens</button>
+    </div>
+    <div class="part-apports">
+      <span>J'apporte :</span>
+      <label><input type="checkbox" data-ap value="echelle" />🪜</label>
+      <label><input type="checkbox" data-ap value="caisses" />🧺</label>
+      <label><input type="checkbox" data-ap value="rateau" />🪮</label>
+      <label><input type="checkbox" data-ap value="filet" title="filet" />🥅</label>
+      <label><input type="checkbox" data-ap value="bache" title="bâche" />🟦</label>
     </div>`;
   zone.querySelectorAll('[data-pid]').forEach((b) => {
     b.addEventListener('click', async () => {
@@ -665,7 +667,7 @@ async function loadParticipations(id, zone, quand) {
   go.addEventListener('click', async () => {
     const pseudo = zone.querySelector('[data-part-pseudo]').value.trim().toLowerCase();
     const nb = parseInt(zone.querySelector('[data-part-nb]').value, 10) || 1;
-    const ap = zone.querySelector('[data-part-apporte]').value;
+    const ap = Array.from(zone.querySelectorAll('[data-ap]:checked')).map((c) => c.value).join(',');
     if (!pseudo) { toast('⚠️ Indique un pseudo.', false); return; }
     const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb, apporte: ap || null });
     if (err) { toast('⚠️ ' + err.message, false); return; }
