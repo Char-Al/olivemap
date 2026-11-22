@@ -285,6 +285,23 @@ html, body {
 .tree-icon.pending svg path { stroke-dasharray: 4 3; }
 
 /* ---- Toast ---- */
+.event-banner {
+  position: absolute; top: 64px; left: 12px;
+  z-index: 1100;
+  background: var(--panel-2); border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 10px 34px 10px 14px; font-size: 13px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  max-width: min(560px, calc(100vw - 24px));
+  pointer-events: auto;
+  display: none;
+}
+.event-banner .eb-close {
+  position: absolute; top: 4px; right: 4px;
+  background: transparent; border: none; color: var(--text-dim);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  padding: 2px 6px; line-height: 1;
+}
 .toast {
   position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
   z-index: 2000;

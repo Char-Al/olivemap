@@ -630,9 +630,32 @@ async function loadParticipations(id, zone, quand) {
   });
 }
 
+async function loadEventBanner() {
+  const banner = document.getElementById('event-banner');
+  if (!sb) { banner.style.display = 'none'; return; }
+  const { data, error } = await sb.from('infos').select('valeur').eq('cle', 'rdv').maybeSingle();
+  if (error || !data || !data.valeur) { banner.style.display = 'none'; return; }
+  if (sessionStorage.getItem('olivemap_banner_ok') === data.valeur) { banner.style.display = 'none'; return; }
+  banner.innerHTML =
+    '<span class="eb-text">📢 ' + esc(data.valeur).replace(/\n/g, '<br/>') + '</span>' +
+    '<button class="eb-close" id="eb-close">✕</button>';
+  banner.style.display = 'block';
+  document.getElementById('eb-close').addEventListener('click', () => {
+    banner.style.display = 'none';
+    sessionStorage.setItem('olivemap_banner_ok', data.valeur);
+  });
+}
+
 async function loadAdminPanel() {
   document.getElementById('admin-info').textContent =
     `Connect\u00e9 : ${currentEmail ? pseudoOf(currentEmail) : '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
+  const evAdm = document.getElementById('event-admin');
+  evAdm.style.display = isAdminUser ? '' : 'none';
+  if (isAdminUser) {
+    const et = document.getElementById('event-text');
+    const { data: info } = await sb.from('infos').select('valeur').eq('cle', 'rdv').maybeSingle();
+    if (document.activeElement !== et) et.value = (info && info.valeur) || '';
+  }
   const pl = document.getElementById('pending-list');
   const al = document.getElementById('admins-list');
   pl.innerHTML = '';
@@ -792,11 +815,21 @@ document.getElementById('btn-signout').addEventListener('click', async () => {
   await load();
 });
 
+document.getElementById('btn-save-info').addEventListener('click', async () => {
+  if (!isAdminUser) { toast('\u26D4 R\u00e9serv\u00e9 aux administrateurs.', false); return; }
+  const v = document.getElementById('event-text').value.trim();
+  const { error } = await sb.from('infos').upsert({ cle: 'rdv', valeur: v, maj_le: new Date().toISOString() });
+  if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
+  sessionStorage.removeItem('olivemap_banner_ok');
+  loadEventBanner();
+  toast(v ? '\U0001F4E2 Annonce enregistr\u00e9e.' : '\U0001F5D1 Annonce effac\u00e9e.');
+});
+
 document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
 
 const bootAdmin = sb ? refreshAdminState() : Promise.resolve();
 
-bootAdmin.finally(() => load()).catch(() => {
+bootAdmin.finally(() => { load(); loadEventBanner(); }).catch(() => {
   toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);
 });
 

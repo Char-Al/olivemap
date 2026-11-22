@@ -30,6 +30,7 @@
     </div>
   </div>
 
+  <div class="event-banner" id="event-banner" style="display:none"></div>
   <div class="legend">
     <div id="legend-particulier" class="legend-toggle active" title="Afficher / masquer les arbres de particuliers"><span class="swatch" style="background:#7fb069"></span>Particulier</div>
     <div id="legend-mairie" class="legend-toggle active" title="Afficher / masquer les arbres de la mairie"><span class="swatch" style="background:#4a8fc7"></span>Mairie</div>
@@ -142,6 +143,11 @@
       <div class="step" id="step-admin">
         <h2>👑 Espace admin</h2>
         <p class="hint" id="admin-info"></p>
+        <div id="event-admin" style="display:none">
+          <label>Annonce (rendez-vous / consignes, vide = aucune)</label>
+          <textarea id="event-text" rows="3" placeholder="Samedi 9h — place du village…"></textarea>
+          <button type="button" class="mini ok" id="btn-save-info">📢 Enregistrer l'annonce</button>
+        </div>
         <h3>Demandes en attente</h3>
         <div id="pending-list"></div>
         <h3>Arbres recensés</h3>
