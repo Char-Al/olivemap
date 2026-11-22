@@ -122,11 +122,15 @@ function visibleFeatures() {
   const showM = document.getElementById('legend-mairie').classList.contains('active');
   const showP = document.getElementById('legend-particulier').classList.contains('active');
   const op = document.getElementById('btn-filter-open').classList.contains('active');
+  const j1 = document.getElementById('btn-jour1').classList.contains('active');
+  const j2 = document.getElementById('btn-jour2').classList.contains('active');
   const now = new Date();
   return allFeatures.filter((f) => {
     const p = f.properties || {};
     if (p.type === 'mairie' && !showM) return false;
     if (p.type === 'particulier' && !showP) return false;
+    if (j1 && p.jour !== 1) return false;
+    if (j2 && p.jour !== 2) return false;
     if (op) {
       if (p.statut === 'attente') return false;
       if (p.ramassage && new Date(p.ramassage) < now) return false;
@@ -259,6 +263,18 @@ document.getElementById('legend-particulier').addEventListener('click', () => {
 });
 document.getElementById('legend-mairie').addEventListener('click', () => {
   document.getElementById('legend-mairie').classList.toggle('active');
+  render();
+});
+document.getElementById('btn-jour1').addEventListener('click', () => {
+  document.getElementById('btn-jour2').classList.remove('active');
+  document.getElementById('btn-jour1').classList.toggle('active');
+  visibleFeatures();
+  render();
+});
+document.getElementById('btn-jour2').addEventListener('click', () => {
+  document.getElementById('btn-jour1').classList.remove('active');
+  document.getElementById('btn-jour2').classList.toggle('active');
+  visibleFeatures();
   render();
 });
 document.getElementById('btn-filter-open').addEventListener('click', () => {
