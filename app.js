@@ -599,11 +599,12 @@ function adminsRow(email, removable) {
 }
 
 const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', deux: '🪜🧺 les deux' };
 
 async function loadParticipations(id, zone, quand) {
   if (!sb) return;
   zone.innerHTML = '<div class="hint">⏳ Chargement…</div>';
-  const { data, error } = await sb.from('participations').select('id, pseudo, nb_personnes').eq('arbre_id', id).order('cree_le');
+  const { data, error } = await sb.from('participations').select('id, pseudo, nb_personnes, apporte').eq('arbre_id', id).order('cree_le');
   if (error) { zone.innerHTML = '<div class="hint">⚠️ ' + error.message + '</div>'; return; }
   const total = (data || []).reduce((a, r) => a + (r.nb_personnes || 1), 0);
   const quandTxt = quand ? ` 🚚 ${new Date(quand).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : '';
@@ -611,7 +612,7 @@ async function loadParticipations(id, zone, quand) {
     const del = isAdminUser
       ? ` <button type="button" class="mini no part-del" data-pid="${r.id}" title="Retirer ce volontaire">✕</button>`
       : '';
-    return `<div class="part-row">· <b>${esc(r.pseudo)}</b> (${r.nb_personnes})${del}</div>`;
+    return `<div class="part-row">· <b>${esc(r.pseudo)}</b> (${r.nb_personnes})${r.apporte ? ` — ${APPORT_LABELS[r.apporte] || esc(r.apporte)}` : ''}${del}</div>`;
   }).join('');
   const me = localStorage.getItem('olivemap_pseudo') || '';
   zone.innerHTML = `
@@ -619,6 +620,12 @@ async function loadParticipations(id, zone, quand) {
     ${list ? `<div class="part-list">${list}</div>` : ''}
     <div class="part-form">
       <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
+      <select data-part-apporte>
+        <option value="">de rien</option>
+        <option value="echelle">🪜 échelle</option>
+        <option value="caisses">🧺 caisses</option>
+        <option value="deux">🪜🧺 les deux</option>
+      </select>
       <input data-part-nb type="number" min="1" max="50" value="1" />
       <button type="button" class="mini ok" data-part-go>🙋 Je viens</button>
     </div>`;
@@ -634,8 +641,9 @@ async function loadParticipations(id, zone, quand) {
   go.addEventListener('click', async () => {
     const pseudo = zone.querySelector('[data-part-pseudo]').value.trim().toLowerCase();
     const nb = parseInt(zone.querySelector('[data-part-nb]').value, 10) || 1;
+    const ap = zone.querySelector('[data-part-apporte]').value;
     if (!pseudo) { toast('⚠️ Indique un pseudo.', false); return; }
-    const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb });
+    const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb, apporte: ap || null });
     if (err) { toast('⚠️ ' + err.message, false); return; }
     localStorage.setItem('olivemap_pseudo', pseudo);
     toast(`🙋 ${pseudo} · ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
