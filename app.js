@@ -116,7 +116,7 @@ function popupHtml(props, coords) {
     }
   }
   return `<div class="popup">
-    <h3>${esc(props.emoji) || (actPending ? '⏳' : '🫒')} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
+    <h3>${props.emoji ? esc(props.emoji) : (actPending ? '⏳' : '🫒')} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
     ${props.espece ? `<div class="species">${esc(props.espece)}</div>` : ''}
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
@@ -853,7 +853,7 @@ document.getElementById('btn-signout').addEventListener('click', async () => {
 document.getElementById('btn-save-info').addEventListener('click', async () => {
   if (!isAdminUser) { toast('\u26D4 R\u00e9serv\u00e9 aux administrateurs.', false); return; }
   const v = document.getElementById('event-text').value.trim();
-  const { error } = await sb.from('infos').upsert({ cle: 'rdv', valeur: v, maj_le: new Date().toISOString() });
+  const { error } = await sb.from('infos').upsert({ cle: 'rdv', valeur: v, maj_le: new Date().toISOString() }, { onConflict: 'cle' });
   if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
   sessionStorage.removeItem('olivemap_banner_ok');
   loadEventBanner();
