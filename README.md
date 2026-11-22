@@ -34,6 +34,7 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 - Voir les **demandes en attente**, définir une date de ramassage, **valider** ✅ ou **rejeter** 🗑️ en un clic
 - Les demandes en attente apparaissent aussi **directement sur la carte** pour les admins connectés : point **en pointillés et translucide**, popup marquée « ⏳ En attente » avec **date + heure de ramassage (optionnel)** et boutons **Valider/Rejeter** directement dans le popup (invisibles pour les visiteurs, filtre RLS)
 - **Édition complète depuis la popup** (admins) : bouton « ✏️ Modifier » (formulaire pré-rempli : tous les champs + date de ramassage), « ⏳ Dévalider » (remet l’arbre en attente) et « 🗑 Supprimer » — protégé par la RLS côté base
+- **Tableau récapitulatif de tous les arbres** en base (nom, propriétaire, rendement, espèce, ramassage, statut) avec actions rapides : valider/dévalider, supprimer
 - **Gérer les administrateurs** : ajouter un pseudo (`＋`) ou en retirer — le premier admin doit néanmoins être inséré à la main : dans le SQL Editor, décommente la section 7 de `supabase.sql` avec ton pseudo (sous la forme du compte système) :
 
 ```sql
