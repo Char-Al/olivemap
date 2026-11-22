@@ -1,10 +1,11 @@
 /* Olivemap service worker — offline shell + tuiles OSM */
-const CACHE = 'olivemap-v10';
+const CACHE = 'olivemap-v11';
 const TILES = 'olivemap-tiles';
 
 const SHELL = [
   './',
   './index.html',
+  './manifest.webmanifest',
   './arbres.geojson',
   './styles.css',
   './app.js',

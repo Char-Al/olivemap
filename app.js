@@ -25,6 +25,7 @@ const zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
 const stateLabels = { 'bon': 'Bon état', 'moyen': 'Moyen', 'mauvais': 'Mauvais état' };
 let markers = [];
 let addMode = false;
+let didFitView = false;
 
 function oliveGlyphs(prod) {
   const S = 12;
@@ -85,7 +86,7 @@ function popupHtml(props) {
   if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
   if (props.etat) {
     const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || props.etat}</span>`]);
+    rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || esc(props.etat)}</span>`]);
   }
   if (props.ramassage) {
     const d = new Date(props.ramassage);
@@ -96,15 +97,15 @@ function popupHtml(props) {
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
     if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id'].includes(k) && v != null && v !== '') {
-      rows.push([k, String(v)]);
+      rows.push([esc(k), esc(String(v))]);
     }
   }
   return `<div class="popup">
-    <h3>${props.emoji || (actPending ? '⏳' : '🫒')} ${props.nom || 'Sans nom'}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
-    ${props.espece ? `<div class="species">${props.espece}</div>` : ''}
-    ${props.photo ? `<img src="${props.photo}" alt="${props.nom || ''}" onerror="this.style.display='none'"/>` : ''}
+    <h3>${esc(props.emoji) || (actPending ? '⏳' : '🫒')} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
+    ${props.espece ? `<div class="species">${esc(props.espece)}</div>` : ''}
+    ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
-    ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
+    ${props.notes ? `<div class="notes">${esc(props.notes)}</div>` : ''}
     ${props.id && props.statut !== 'attente' && props.ramassage && new Date(props.ramassage) >= new Date() ? '<div class="part-zone" data-part></div>' : ''}
     ${actPending ? `
       <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
@@ -149,11 +150,11 @@ function render() {
             const date = dEl && dEl.value ? new Date(dEl.value).toISOString() : null;
             const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date }).eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-            toast(`\u2705 \u00ab ${f.properties.nom} \u00bb valid\u00e9${date ? ' \u2014 ramassage pr\u00e9vu le ' + dEl.value.replace('T', ' \u00e0 ') : ''} \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
+            toast(`\u2705 \u00ab ${esc(f.properties.nom)} \u00bb valid\u00e9${date ? ' \u2014 ramassage pr\u00e9vu le ' + dEl.value.replace('T', ' \u00e0 ') : ''} \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
           } else {
             const { error } = await sb.from('arbres').delete().eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-            toast(`\u{1F5D1} Proposition \u00ab ${f.properties.nom} \u00bb rejet\u00e9e.`);
+            toast(`\u{1F5D1} Proposition \u00ab ${esc(f.properties.nom)} \u00bb rejet\u00e9e.`);
           }
           marker.closePopup();
           if (typeof loadAdminPanel === 'function' && isAdminUser) loadAdminPanel();
@@ -170,7 +171,7 @@ function render() {
           const { error } = await sb.from('arbres').update({ statut: 'attente' }).eq('id', f.properties.id);
           if (error) { toast('⚠️ ' + error.message, false); return; }
           marker.closePopup();
-          toast(`⏳ « ${f.properties.nom} » remis en attente — visible des admins uniquement.`);
+          toast(`⏳ « ${esc(f.properties.nom)} » remis en attente — visible des admins uniquement.`);
           await load();
         });
         const btnDel = el.querySelector('[data-act="del"]');
@@ -178,14 +179,14 @@ function render() {
           const { error } = await sb.from('arbres').delete().eq('id', f.properties.id);
           if (error) { toast('⚠️ ' + error.message, false); return; }
           marker.closePopup();
-          toast(`🗑 « ${f.properties.nom} » supprimé.`);
+          toast(`🗑 « ${esc(f.properties.nom)} » supprimé.`);
           await load();
         });
         const pz = el.querySelector('[data-part]');
         if (pz) loadParticipations(f.properties.id, pz, f.properties.ramassage);
       });
     }
-    marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${f.properties.nom || 'Arbre'} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
+    marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${esc(f.properties.nom || 'Arbre')} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
     markers.push({ marker });
     marker.addTo(map);
   });
@@ -236,10 +237,13 @@ async function load() {
 
   allFeatures = features;
 
-  if (allFeatures.length === 1) {
-    map.setView([allFeatures[0].geometry.coordinates[1], allFeatures[0].geometry.coordinates[0]], 16);
-  } else if (allFeatures.length > 1) {
-    map.fitBounds(L.latLngBounds(allFeatures.map((f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]])).pad(0.25));
+  if (!didFitView) {
+    if (allFeatures.length === 1) {
+      map.setView([allFeatures[0].geometry.coordinates[1], allFeatures[0].geometry.coordinates[0]], 16);
+    } else if (allFeatures.length > 1) {
+      map.fitBounds(L.latLngBounds(allFeatures.map((f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]])).pad(0.25));
+    }
+    didFitView = true;
   }
 
   render();
@@ -416,9 +420,9 @@ async function proposeFeature(props) {
     map.panTo([lat, lng]);
     await load();
     if (typeof loadAdminPanel === 'function') loadAdminPanel();
-    toast(`🫒 Proposition « <b>${p.nom}</b> » enregistrée — visible sur la carte (en pointillés) jusqu'à validation.`, false);
+    toast(`🫒 Proposition « <b>${esc(p.nom)}</b> » enregistrée — visible sur la carte (en pointillés) jusqu'à validation.`, false);
   } else {
-    toast(`🙏 Merci ! La proposition « <b>${p.nom}</b> » attend la validation.`, false);
+    toast(`🙏 Merci ! La proposition « <b>${esc(p.nom)}</b> » attend la validation.`, false);
   }
 }
 
@@ -622,7 +626,7 @@ async function loadAdminPanel() {
       const card = document.createElement('div');
       card.className = 'pending-card';
       card.innerHTML = `
-        <div class="p-name">${t.nom}</div>
+        <div class="p-name">${esc(t.nom)}</div>
         <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · propos\u00e9 le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
         <label>Date de ramassage (optionnel) <input type="datetime-local" class="p-date" /></label>
         <div class="p-actions">
@@ -633,14 +637,14 @@ async function loadAdminPanel() {
         const date = card.querySelector('.p-date').value;
         const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date || null }).eq('id', t.id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u2705 \u00ab ${t.nom} \u00bb valid\u00e9${date ? ' (ramassage : ' + date + ')' : ' sans date de ramassage'}.`, false);
+        toast(`\u2705 \u00ab ${esc(t.nom)} \u00bb valid\u00e9${date ? ' (ramassage : ' + date + ')' : ' sans date de ramassage'}.`, false);
         loadAdminPanel();
         load();
       });
       card.querySelector('.no').addEventListener('click', async () => {
         const { error } = await sb.from('arbres').delete().eq('id', t.id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u{1F5D1} Proposition \u00ab ${t.nom} \u00bb rejet\u00e9e.`);
+        toast(`\u{1F5D1} Proposition \u00ab ${esc(t.nom)} \u00bb rejet\u00e9e.`);
         loadAdminPanel();
       });
       pl.appendChild(card);
@@ -673,15 +677,15 @@ async function loadAdminPanel() {
         const ns = row.statut === 'valide' ? 'attente' : 'valide';
         const { error } = await sb.from('arbres').update({ statut: ns }).eq('id', id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`${ns === 'valide' ? '\u2705' : '\u23f3'} \u00ab ${row.nom} \u00bb \u2192 ${ns}.`);
+        toast(`${ns === 'valide' ? '\u2705' : '\u23f3'} \u00ab ${esc(row.nom)} \u00bb \u2192 ${ns}.`);
         loadAdminPanel();
         load();
       });
       tr.querySelector('[data-td="del"]').addEventListener('click', async () => {
-        if (!confirm(`Supprimer \u00ab ${row.nom} \u00bb ?`)) return;
+        if (!confirm(`Supprimer \u00ab ${esc(row.nom)} \u00bb ?`)) return;
         const { error } = await sb.from('arbres').delete().eq('id', id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u{0001F5D1} \u00ab ${row.nom} \u00bb supprim\u00e9.`);
+        toast(`\u{0001F5D1} \u00ab ${esc(row.nom)} \u00bb supprim\u00e9.`);
         loadAdminPanel();
         load();
       });
