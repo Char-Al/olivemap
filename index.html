@@ -135,6 +135,26 @@
       font-size: 14px; font-weight: bold; color: var(--danger);
     }
 
+    .prod-dots { color: var(--accent); letter-spacing: 2px; font-size: 14px; }
+    .owner-mairie { background: #2d4a63; color: #bcd9f2; }
+    .owner-particulier { background: #35502c; color: #d3efc2; }
+
+    .legend {
+      position: absolute; right: 12px; bottom: 96px;
+      z-index: 1000;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 12px; color: var(--text-dim);
+      box-shadow: 0 4px 16px rgba(0,0,0,.35);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .swatch {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; margin-right: 6px; vertical-align: middle;
+    }
+    .legend-prod { border-top: 1px solid var(--border); padding-top: 6px; }
+
     .state-badge {
       display: inline-block; padding: 1px 8px; border-radius: 999px;
       font-size: 11px; font-weight: 700;
@@ -174,6 +194,7 @@
       .brand span.title { font-size: 14px; }
       .search { min-width: 0; flex: 1; }
       .topbar { left: 8px; right: 8px; }
+      .legend { right: 8px; bottom: 84px; font-size: 11px; padding: 8px 10px; }
     }
   </style>
 </head>
@@ -188,18 +209,30 @@
       <select id="filter-species" class="search">
         <option value="">Toutes les espèces</option>
       </select>
+      <select id="filter-owner" class="search">
+        <option value="">Mairie + particuliers</option>
+        <option value="Mairie">Mairie</option>
+        <option value="Particulier">Particuliers</option>
+      </select>
       <button id="btn-add" class="btn" title="Ajouter un arbre">＋ Point</button>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
     </div>
   </div>
 
+  <div class="legend">
+    <div><span class="swatch" style="background:#7fb069"></span>Particulier</div>
+    <div><span class="swatch" style="background:#4a8fc7"></span>Mairie</div>
+    <div class="legend-prod">Rendement&nbsp;: <span class="prod-dots">●●●</span> 3 · <span class="prod-dots">●●○</span> 2 · <span class="prod-dots">●○○</span> 1</div>
+  </div>
   <div class="counter" id="counter"></div>
   <div class="add-badge" id="add-badge">Cliquez sur la carte pour choisir l'emplacement — annuler</div>
   <div class="toast" id="toast"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const DEFAULT_VIEW = { center: [43.2965, 5.3698], zoom: 15 };
+    const DEFAULT_VIEW = { center: [43.8619, 3.9047], zoom: 16 };
+    const OWNER_COLORS = { mairie: '#4a8fc7', particulier: '#7fb069' };
+    const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
 
     const map = L.map('map', { zoomControl: false }).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -212,11 +245,13 @@
     let markers = [];
     let addMode = false;
 
-    function markerIcon() {
+    function markerIcon(props) {
+      const color = OWNER_COLORS[props.type] || '#7fb069';
       return L.divIcon({
         className: 'tree-marker',
         html: `<div class="tree-icon"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="#7fb069" stroke-width="2"/>
+          <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="${color}" stroke-width="2"/>
+          <circle cx="17" cy="38" r="2.4" fill="${color}"/>
           <text x="17" y="20" text-anchor="middle" font-size="14" fill="#7fb069">🫒</text>
         </svg></div>`,
         iconSize: [34, 46],
@@ -225,8 +260,26 @@
       });
     }
 
+    function productionDots(n) {
+      const v = Math.min(Math.max(parseInt(n, 10) || 0, 1), 3);
+      return `<span class="prod-dots" title="Rendement : ${v}/3">${'\u25CF'.repeat(v)}${'\u25CB'.repeat(3 - v)}</span>`;
+    }
+
+    function ownerBadge(type) {
+      const key = type === 'mairie' ? 'mairie' : 'particulier';
+      return `<span class="state-badge owner-${key}">${OWNER_LABELS[key]}</span>`;
+    }
+
     function popupHtml(props) {
       const rows = [];
+      if (props.type || props.production) {
+        rows.push([
+          'Statut',
+          `${props.type ? ownerBadge(props.type) : ''}` +
+          `${props.type && props.production ? ' ' : ''}` +
+          `${props.production ? productionDots(props.production) : ''}`,
+        ]);
+      }
       if (props.hauteur_m) rows.push(['Hauteur', `${props.hauteur_m} m`]);
       if (props.circonference_cm) rows.push(['Circonférence', `${props.circonference_cm} cm`]);
       if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
@@ -235,7 +288,7 @@
         rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || props.etat}</span>`]);
       }
       for (const [k, v] of Object.entries(props)) {
-        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji'].includes(k) && v != null && v !== '') {
+        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production'].includes(k) && v != null && v !== '') {
           rows.push([k, String(v)]);
         }
       }
@@ -251,9 +304,11 @@
     function visibleFeatures() {
       const q = document.getElementById('search').value.trim().toLowerCase();
       const sp = document.getElementById('filter-species').value;
+      const ow = document.getElementById('filter-owner').value;
       return allFeatures.filter((f) => {
         const p = f.properties || {};
         if (sp && (p.espece || '') !== sp) return false;
+        if (ow && (OWNER_LABELS[p.type] || p.type || '') !== ow) return false;
         if (q) {
           const blob = Object.values(p).join(' ').toLowerCase();
           if (!blob.includes(q)) return false;
@@ -267,8 +322,9 @@
       markers = [];
       const feats = visibleFeatures();
       feats.forEach((f) => {
-        const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon() });
+        const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}) });
         marker.bindPopup(popupHtml(f.properties), { maxWidth: 280 });
+        marker.bindTooltip(`${f.properties.nom || 'Arbre'} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}`, { direction: 'top', offset: [0, -44] });
         markers.push({ marker });
         marker.addTo(map);
       });
@@ -307,6 +363,7 @@
 
     document.getElementById('search').addEventListener('input', render);
     document.getElementById('filter-species').addEventListener('change', render);
+    document.getElementById('filter-owner').addEventListener('change', render);
 
     document.getElementById('btn-locate').addEventListener('click', () => {
       map.locate({ setView: true, maxZoom: 16 });
@@ -333,6 +390,8 @@
   "type": "Feature",
   "properties": {
     "nom": "?",
+    "type": "particulier",
+    "production": 2,
     "espece": "",
     "notes": ""
   },

@@ -5,78 +5,147 @@
     {
       "type": "Feature",
       "properties": {
-        "nom": "Olivier du Mail I",
-        "espece": "Olea europaea",
+        "nom": "Olivier de la Place",
+        "type": "mairie",
+        "espece": "Olea europaea — Lucques",
         "hauteur_m": 5,
-        "circonference_cm": 145,
-        "annee_plantation": 1932,
+        "circonference_cm": 150,
+        "annee_plantation": 1948,
         "etat": "bon",
-        "notes": "Grand sujet remarquable, couronne équilibrée."
+        "production": 3,
+        "notes": "Sujet central de la place, taillé chaque printemps par les services techniques."
       },
-      "geometry": { "type": "Point", "coordinates": [5.3688, 43.2951] }
+      "geometry": { "type": "Point", "coordinates": [3.9038, 43.8618] }
     },
     {
       "type": "Feature",
       "properties": {
-        "nom": "Olivier du Mail II",
+        "nom": "Olivier du Parc",
+        "type": "mairie",
+        "espece": "Olea europaea — Picholine",
+        "hauteur_m": 6,
+        "circonference_cm": 165,
+        "annee_plantation": 1935,
+        "etat": "bon",
+        "production": 3
+      },
+      "geometry": { "type": "Point", "coordinates": [3.9062, 43.8630] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier de l'École",
+        "type": "mairie",
         "espece": "Olea europaea",
         "hauteur_m": 4,
-        "circonference_cm": 98,
-        "annee_plantation": 1986,
-        "etat": "bon"
-      },
-      "geometry": { "type": "Point", "coordinates": [5.3701, 43.2963] }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "nom": "Olivier du jardin",
-        "espece": "Olea europaea var. sylvestris",
-        "hauteur_m": 3,
-        "circonference_cm": 62,
-        "annee_plantation": 2004,
+        "circonference_cm": 95,
+        "annee_plantation": 1989,
         "etat": "moyen",
-        "notes": "Taille de formation à prévoir à l'automne."
+        "production": 2,
+        "notes": "Ombre bienvenue sur la cour, sol tassé à ameublir."
       },
-      "geometry": { "type": "Point", "coordinates": [5.3715, 43.2977] }
+      "geometry": { "type": "Point", "coordinates": [3.9057, 43.8605] }
     },
     {
       "type": "Feature",
       "properties": {
-        "nom": "Platane de l'avenue",
-        "espece": "Platanus x acerifolia",
-        "hauteur_m": 22,
-        "circonference_cm": 310,
-        "annee_plantation": 1901,
-        "etat": "moyen",
-        "notes": "Élagage sanitaire effectué en 2023."
+        "nom": "Olivier du Lavoir",
+        "type": "mairie",
+        "espece": "Olea europaea",
+        "hauteur_m": 4,
+        "circonference_cm": 110,
+        "annee_plantation": 1972,
+        "etat": "bon",
+        "production": 2
       },
-      "geometry": { "type": "Point", "coordinates": [5.3734, 43.2948] }
+      "geometry": { "type": "Point", "coordinates": [3.9021, 43.8627] }
     },
     {
       "type": "Feature",
       "properties": {
-        "nom": "Micocoulier du parc",
-        "espece": "Celtis australis",
-        "hauteur_m": 12,
-        "circonference_cm": 180,
-        "annee_plantation": 1958,
-        "etat": "bon"
+        "nom": "Olivier de la Fontaine",
+        "type": "particulier",
+        "espece": "Olea europaea — Picholine",
+        "hauteur_m": 5,
+        "circonference_cm": 130,
+        "annee_plantation": 1965,
+        "etat": "bon",
+        "production": 3,
+        "notes": "Récolte mise en conserve verte chaque année."
       },
-      "geometry": { "type": "Point", "coordinates": [5.3669, 43.2982] }
+      "geometry": { "type": "Point", "coordinates": [3.9076, 43.8608] }
     },
     {
       "type": "Feature",
       "properties": {
-        "nom": "Pistachier sauvage",
-        "espece": "Pistacia terebinthus",
+        "nom": "Olivier du Chemin Bas",
+        "type": "particulier",
+        "espece": "Olea europaea — Lucques",
         "hauteur_m": 3,
-        "circonference_cm": 40,
+        "circonference_cm": 60,
+        "annee_plantation": 2010,
+        "etat": "bon",
+        "production": 1
+      },
+      "geometry": { "type": "Point", "coordinates": [3.9043, 43.8641] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier de la Terrasse",
+        "type": "particulier",
+        "espece": "Olea europaea",
+        "hauteur_m": 4,
+        "circonference_cm": 82,
+        "annee_plantation": 1998,
+        "etat": "moyen",
+        "production": 2,
+        "notes": "Gel pâle en 2021, reprise progressive."
+      },
+      "geometry": { "type": "Point", "coordinates": [3.9009, 43.8598] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier des Vignes",
+        "type": "particulier",
+        "espece": "Olea europaea — Picholine",
+        "hauteur_m": 6,
+        "circonference_cm": 145,
+        "annee_plantation": 1952,
+        "etat": "bon",
+        "production": 3
+      },
+      "geometry": { "type": "Point", "coordinates": [3.9088, 43.8635] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier du Clos",
+        "type": "particulier",
+        "espece": "Olea europaea",
+        "hauteur_m": 5,
+        "circonference_cm": 120,
+        "annee_plantation": 1978,
+        "etat": "moyen",
+        "production": 1,
+        "notes": "Sol pauvre, apport de compost prévu à l'automne."
+      },
+      "geometry": { "type": "Point", "coordinates": [3.9029, 43.8652] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier du Vieux Mur",
+        "type": "particulier",
+        "espece": "Olea europaea — Lucques",
+        "hauteur_m": 3,
+        "circonference_cm": 55,
         "annee_plantation": 2015,
-        "etat": "mauvais",
-        "notes": "Souffre de la sécheresse, arrosage mensuel en été."
+        "etat": "bon",
+        "production": 1
       },
-      "geometry": { "type": "Point", "coordinates": [5.3652, 43.2935] }
+      "geometry": { "type": "Point", "coordinates": [3.9069, 43.8588] }
     }
   ]
 }
