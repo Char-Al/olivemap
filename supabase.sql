@@ -61,7 +61,11 @@ alter table public.arbres enable row level security;
 
 drop policy if exists "lecture publique des arbres valides" on public.arbres;
 drop policy if exists "proposition publique d'un arbre" on public.arbres;
+drop policy if exists "lecture des arbres valides ou par un admin" on public.arbres;
+drop policy if exists "proposition publique sans date de ramassage" on public.arbres;
 drop policy if exists "creation d'arbres valides par les admins" on public.arbres;
+drop policy if exists "un admin met à jour les arbres" on public.arbres;
+drop policy if exists "un admin supprime les arbres" on public.arbres;
 
 create policy "lecture des arbres valides ou par un admin"
   on public.arbres for select
