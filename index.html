@@ -154,6 +154,11 @@
     }
     .legend-toggle { cursor: pointer; user-select: none; transition: opacity .15s; }
     .legend-toggle:not(.active) { opacity: .35; text-decoration: line-through; }
+    .swatch-zone {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; border: 1.5px dashed #e0c36a; margin-right: 6px;
+      vertical-align: middle;
+    }
 
     /* ---- Modale création ---- */
     .modal-overlay {
@@ -345,6 +350,7 @@
   <div class="legend">
     <div id="legend-particulier" class="legend-toggle active" title="Afficher / masquer les arbres de particuliers"><span class="swatch" style="background:#7fb069"></span>Particulier</div>
     <div id="legend-mairie" class="legend-toggle active" title="Afficher / masquer les arbres de la mairie"><span class="swatch" style="background:#4a8fc7"></span>Mairie</div>
+    <div><span class="swatch-zone"></span>Limite de proposition (3 km)</div>
     <div id="legend-pending" style="display:none;align-items:center;gap:6px"><svg width="14" height="18" viewBox="0 0 34 46"><path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="#9a8f6a" stroke-width="2" stroke-dasharray="4 3"/></svg> en attente (admins)</div>
   </div>
   <div class="counter" id="counter"></div>
@@ -467,7 +473,6 @@
     const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
     const ADMIN_EMAIL_DOMAIN = '@olivemap.claret';
     const ZONE = { lat: DEFAULT_VIEW.center[0], lng: DEFAULT_VIEW.center[1], km: 3 };
-    let zoneCircle = null;
     const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_kYKGqGknRPqJyJemHVVNLw_jYRT_N4R';
     let sb = null;
@@ -480,6 +485,10 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    const zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
+      radius: ZONE.km * 1000,
+      color: '#e0c36a', weight: 1.5, dashArray: '6 6', fillOpacity: 0.03,
     }).addTo(map);
 
     const stateLabels = { 'bon': 'Bon état', 'moyen': 'Moyen', 'mauvais': 'Mauvais état' };
@@ -729,13 +738,6 @@
       addMode = on === undefined ? !addMode : on;
       addBadge.classList.toggle('visible', addMode);
       document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
-      if (zoneCircle) { map.removeLayer(zoneCircle); zoneCircle = null; }
-      if (addMode) {
-        zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
-          radius: ZONE.km * 1000,
-          color: '#e0c36a', weight: 1.5, dashArray: '6 6', fillOpacity: 0.03,
-        }).addTo(map);
-      }
     }
     let addModeTarget = 'propose';
     const btnPropose = document.getElementById('btn-propose');
