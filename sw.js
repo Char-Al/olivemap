@@ -1,5 +1,5 @@
 /* Olivemap service worker — offline shell + tuiles OSM */
-const CACHE = 'olivemap-v7';
+const CACHE = 'olivemap-v8';
 const TILES = 'olivemap-tiles';
 
 const SHELL = [

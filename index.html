@@ -466,6 +466,8 @@
     const OWNER_COLORS = { mairie: '#4a8fc7', particulier: '#7fb069' };
     const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
     const ADMIN_EMAIL_DOMAIN = '@olivemap.claret';
+    const ZONE = { lat: DEFAULT_VIEW.center[0], lng: DEFAULT_VIEW.center[1], km: 3 };
+    let zoneCircle = null;
     const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_kYKGqGknRPqJyJemHVVNLw_jYRT_N4R';
     let sb = null;
@@ -727,6 +729,13 @@
       addMode = on === undefined ? !addMode : on;
       addBadge.classList.toggle('visible', addMode);
       document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
+      if (zoneCircle) { map.removeLayer(zoneCircle); zoneCircle = null; }
+      if (addMode) {
+        zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
+          radius: ZONE.km * 1000,
+          color: '#e0c36a', weight: 1.5, dashArray: '6 6', fillOpacity: 0.03,
+        }).addTo(map);
+      }
     }
     let addModeTarget = 'propose';
     const btnPropose = document.getElementById('btn-propose');
@@ -884,6 +893,11 @@
 
     map.on('click', (e) => {
       if (!addMode) return;
+      if (map.distance(e.latlng, L.latLng(ZONE.lat, ZONE.lng)) > ZONE.km * 1000) {
+        toggleAdd(false);
+        toast(`⚠️ Trop loin du village — les propositions sont limitées à ${ZONE.km} km autour de Claret.`, false);
+        return;
+      }
       toggleAdd(false);
       pendingCoords = [e.latlng.lng, e.latlng.lat];
       setFormMode(addModeTarget);

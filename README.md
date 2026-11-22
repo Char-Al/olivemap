@@ -24,6 +24,8 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 2. Ouvre le **SQL Editor** du projet et exécute le script [`supabase.sql`](supabase.sql) (table + règles de sécurité RLS : lecture publique des arbres `valide`, insertion publique seulement en `attente`) — le script est idempotent : le ré-exécuter applique les mises à jour de schéma (p. ex. nouvelles colonnes `kids_friendly`, `acces_pieton`)
 3. C'est tout — l'URL du projet et la clé *publishable* `sb_publishable_…` (publique par conception) sont déjà dans `index.html`
 
+**⭕ Zone de proposition** : les propositions (_visiteurs_ comme _admins_) sont **limitées à 3 km autour du village de Claret** — clique sur 🙋 pour voir le cercle du périmètre autorisé sur la carte. Le contrôle est aussi côté base : la policy RLS d'insertion refuse toute coordonnée hors de la zone (les lignes `lat between` / `lng between` de `supabase.sql`) — ajuste-les avec `ZONE` dans `index.html` si tu changes le périmètre.
+
 **⏱ Date de ramassage** : réservée aux **administrateurs** — le champ est masqué dans le formulaire public et la base refuse toute insertion publique avec une date (RLS). Un admin peut la définir **au moment de la validation**.
 
 **🙋 Participations** : dans la popup de tout arbre validé, n'importe qui peut s'inscrire (« 🙋 Je viens ») avec son pseudo et un nombre de personnes. Le total et la liste apparaissent dans la popup. Nécessite la section 8 de `supabase.sql`.
@@ -38,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v7`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v8`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;

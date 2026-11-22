@@ -69,7 +69,11 @@ create policy "lecture des arbres valides ou par un admin"
 
 create policy "proposition publique sans date de ramassage"
   on public.arbres for insert
-  with check (statut = 'attente' and ramassage is null);
+  with check (
+    statut = 'attente' and ramassage is null
+    and lat between 43.83 and 43.90
+    and lng between 3.86 and 3.95
+  );
 
 create policy "creation d'arbres valides par les admins"
   on public.arbres for insert
