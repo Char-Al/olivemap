@@ -61,6 +61,7 @@ alter table public.arbres enable row level security;
 
 drop policy if exists "lecture publique des arbres valides" on public.arbres;
 drop policy if exists "proposition publique d'un arbre" on public.arbres;
+drop policy if exists "creation d'arbres valides par les admins" on public.arbres;
 
 create policy "lecture des arbres valides ou par un admin"
   on public.arbres for select
@@ -69,6 +70,10 @@ create policy "lecture des arbres valides ou par un admin"
 create policy "proposition publique sans date de ramassage"
   on public.arbres for insert
   with check (statut = 'attente' and ramassage is null);
+
+create policy "creation d'arbres valides par les admins"
+  on public.arbres for insert
+  with check (public.is_admin());
 
 create policy "un admin met à jour les arbres"
   on public.arbres for update

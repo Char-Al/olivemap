@@ -352,7 +352,6 @@
       <button id="btn-add" class="btn" title="Ajouter un arbre">＋ Point</button>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-install" class="btn" title="Installer Olivemap sur ton appareil" style="display:none">📲 Installer</button>
-      <button id="btn-key" class="btn" title="Jeton GitHub (pour créer des arbres)">🔑</button>
       <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
       <button id="btn-admin" class="btn" title="Espace admin">👑</button>
     </div>
@@ -437,28 +436,9 @@
           <div class="check-row"><input type="checkbox" id="f-pieton" /><span>🚶 Accès piéton uniquement</span></div>
           <div class="err" id="form-err"></div>
           <div class="modal-actions">
-            <button type="button" class="ghost" id="btn-copy-json">Copier le JSON</button>
             <button type="submit" class="primary" id="btn-submit-form">Créer l'arbre</button>
           </div>
         </form>
-      </div>
-
-      <div class="step" id="step-token">
-        <h2>🔑 Jeton GitHub</h2>
-        <p class="hint">Pour que l'arbre soit partagé (ajouté au dépôt par une demande signée depuis ce navigateur), il faut un jeton d'accès GitHub. Il <b>reste stocké uniquement dans ce navigateur</b> et n'est jamais envoyé ailleurs qu'à l'API GitHub.</p>
-        <p class="hint">Crée-le sur <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> : Repository access → <b>Only select repositories → olivemap</b>, puis Permissions → Contents → <b>Read and write</b>.</p>
-        <label>Jeton</label>
-        <input type="password" id="token-input" placeholder="github_pat_…" autocomplete="off" />
-        <div class="err" id="token-err"></div>
-        <div class="modal-actions">
-          <button type="button" class="ghost" id="btn-remove-token">Supprimer</button>
-          <button type="button" class="primary" id="btn-save-token">Enregistrer</button>
-        </div>
-      </div>
-
-      <div class="step" id="step-commit">
-        <h2>🫒 Création…</h2>
-        <p class="hint" id="commit-msg">Préparation…</p>
       </div>
 
       <div class="step" id="step-login">
@@ -501,10 +481,6 @@
     const DEFAULT_VIEW = { center: [43.8619, 3.9047], zoom: 16 };
     const OWNER_COLORS = { mairie: '#4a8fc7', particulier: '#7fb069' };
     const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
-    const REPO = 'Char-Al/olivemap';
-    const BRANCH = 'main';
-    const DATA_PATH = 'arbres.geojson';
-    const TOKEN_KEY = 'olivemap_token';
     const ADMIN_EMAIL_DOMAIN = '@olivemap.claret';
     const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_kYKGqGknRPqJyJemHVVNLw_jYRT_N4R';
@@ -718,19 +694,23 @@
 
     async function load() {
       const features = [];
-      try {
-        const res = await fetch('arbres.geojson');
-        const data = await res.json();
-        features.push(...(data.features || []).filter((f) => f.geometry && f.geometry.type === 'Point'));
-      } catch (e) { /* geojson indisponible */ }
-
+      let baseOk = false;
       if (sb) {
         try {
           const { data: rows, error } = await sb.from('arbres').select('*');
           if (!error && Array.isArray(rows)) {
             rows.forEach((r) => features.push(rowToFeature(r)));
+            baseOk = true;
           }
-        } catch (e) { /* table absente : geojson seul */ }
+        } catch (e) { /* base inaccessible */ }
+      }
+      if (!baseOk) {
+        try {
+          const res = await fetch('arbres.geojson');
+          const data = await res.json();
+          features.push(...(data.features || []).filter((f) => f.geometry && f.geometry.type === 'Point'));
+          if (sb) toast('⚠️ Base injoignable — affichage de la copie de sauvegarde (lecture seule).', false);
+        } catch (e) { /* aucune source disponible */ }
       }
 
       allFeatures = features;
@@ -776,7 +756,14 @@
     }
     let addModeTarget = 'create';
     const btnPropose = document.getElementById('btn-propose');
-    btnAdd.addEventListener('click', () => { addModeTarget = 'create'; toggleAdd(); });
+    btnAdd.addEventListener('click', () => {
+      if (!isAdminUser) {
+        toast('✋ Créer un arbre directement est réservé aux administrateurs — utilise le bouton ✋ pour proposer un arbre.', false);
+        return;
+      }
+      addModeTarget = 'create';
+      toggleAdd();
+    });
     btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; toggleAdd(); });
     addBadge.addEventListener('click', () => toggleAdd(false));
 
@@ -791,7 +778,7 @@
     }
 
     function showStep(name) {
-      ['form', 'token', 'commit', 'login', 'admin'].forEach((s) => {
+      ['form', 'login', 'admin'].forEach((s) => {
         document.getElementById(`step-${s}`).classList.toggle('visible', s === name);
       });
       document.getElementById('modal-overlay').classList.add('visible');
@@ -819,63 +806,40 @@
       return props;
     }
 
-    function pendingFeatureOf(props, coords) {
-      return { type: 'Feature', properties: props, geometry: { type: 'Point', coordinates: coords } };
-    }
-
-    function toB64(str) {
-      const bytes = new TextEncoder().encode(str);
-      let bin = '';
-      bytes.forEach((b) => { bin += String.fromCharCode(b); });
-      return btoa(bin);
-    }
-
-    function fromB64(b64) {
-      return new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, '')), (c) => c.charCodeAt(0)));
-    }
-
-    function ghHeaders(token) {
-      return { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
-    }
-
-    async function ghGetFile(token) {
-      const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${DATA_PATH}?ref=${BRANCH}`, { headers: ghHeaders(token) });
-      if (res.status === 404) {
-        const local = await (await fetch(DATA_PATH)).json();
-        return { sha: null, data: local };
+    async function createFeature(props) {
+      if (!sb) {
+        toast('⚠️ Base de données injoignable — création impossible pour le moment.', false);
+        return;
       }
-      if (!res.ok) throw { status: res.status, message: await res.text() };
-      const j = await res.json();
-      return { sha: j.sha, data: JSON.parse(fromB64(j.content)) };
-    }
-
-    async function ghPutFile(token, data, sha, message) {
-      const body = { message, content: toB64(`${JSON.stringify(data, null, 2)}\n`), branch: BRANCH };
-      if (sha) body.sha = sha;
-      const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${DATA_PATH}`, {
-        method: 'PUT',
-        headers: { ...ghHeaders(token), 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      const [lng, lat] = pendingCoords;
+      const { error } = await sb.from('arbres').insert({
+        nom: props.nom,
+        type: props.type,
+        production: props.production,
+        etat: props.etat,
+        espece: props.espece || null,
+        hauteur_m: props.hauteur_m || null,
+        circonference_cm: props.circonference_cm || null,
+        annee_plantation: props.annee_plantation || null,
+        photo: props.photo || null,
+        notes: props.notes || null,
+        kids_friendly: !!props.kids_friendly,
+        acces_pieton: !!props.acces_pieton,
+        ramassage: props.ramassage || null,
+        lng,
+        lat,
+        statut: 'valide',
       });
-      if (!res.ok) throw { status: res.status, message: await res.text() };
-      return (await res.json()).commit.html_url;
-    }
-
-    function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
-    function setToken(v) {
-      const t = v.trim();
-      t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY);
-    }
-
-    function showTokenPanel(errMsg) {
-      showStep('token');
-      const err = document.getElementById('token-err');
-      err.textContent = errMsg || '';
-      err.classList.toggle('visible', !!errMsg);
-      document.getElementById('btn-remove-token').style.display = getToken() ? '' : 'none';
-      const input = document.getElementById('token-input');
-      input.value = '';
-      input.focus();
+      if (error) {
+        hideModal();
+        toast('⚠️ Échec de la création : ' + error.message, false);
+        return;
+      }
+      hideModal();
+      map.panTo([lat, lng]);
+      toast(`🫒 « <b>${props.nom}</b> » créé — visible immédiatement par tout le monde.`, false);
+      await load();
+      return true;
     }
 
     let editTreeId = null;
@@ -919,8 +883,6 @@
       const props = collectFormValues();
       if (!props.nom) return;
       editTreeId = id;
-      showStep('commit');
-      document.getElementById('commit-msg').textContent = 'Enregistrement des modifications…';
       const { error } = await sb.from('arbres').update({
         nom: props.nom,
         type: props.type,
@@ -944,15 +906,13 @@
       await load();
     }
 
-    async function proposeFeature(feature) {
+    async function proposeFeature(props) {
       if (!sb) {
-        toast('⚠️ Service de proposition indisponible — utilise « Copier le JSON ».', false);
+        toast('⚠️ Base de données injoignable — proposition impossible pour le moment.', false);
         return;
       }
-      showStep('commit');
-      document.getElementById('commit-msg').textContent = 'Envoi de la proposition…';
-      const p = feature.properties;
-      const [lng, lat] = feature.geometry.coordinates;
+      const p = props;
+      const [lng, lat] = pendingCoords;
       const { error } = await sb.from('arbres').insert({
         nom: p.nom,
         type: p.type,
@@ -983,36 +943,6 @@
       toast(`🙏 Merci ! La proposition « <b>${p.nom}</b> » attend la validation.`, false);
     }
 
-    let pendingFeature = null;
-
-    async function commitFeature() {
-      const token = getToken();
-      if (!token) {
-        showTokenPanel('Un jeton GitHub est nécessaire pour créer un arbre partagé.');
-        return;
-      }
-      showStep('commit');
-      document.getElementById('commit-msg').textContent = 'Lecture du fichier des arbres…';
-      try {
-        const { sha, data } = await ghGetFile(token);
-        document.getElementById('commit-msg').textContent = "Ajout de l'arbre et enregistrement…";
-        data.features.push(pendingFeature);
-        const url = await ghPutFile(token, data, sha, `Ajout de l'arbre « ${pendingFeature.properties.nom} » depuis le site`);
-        allFeatures.push(pendingFeature);
-        render();
-        hideModal();
-        map.panTo([pendingFeature.geometry.coordinates[1], pendingFeature.geometry.coordinates[0]]);
-        toast(`🫒 <b>${pendingFeature.properties.nom}</b> créé ! <a href="${url}" target="_blank">Voir le commit</a> — visible sur le site dans ~1 min.`, false);
-      } catch (err) {
-        if (err.status === 401 || err.status === 403) {
-          showTokenPanel("Jeton invalide ou sans droit d'écriture sur le dépôt. Vérifie-le ou recrée-le.");
-        } else {
-          hideModal();
-          toast(`⚠️ Échec de l'enregistrement (erreur ${err.status || 'réseau'}). Réessaie ou ajoute l'arbre à la main.`, false);
-        }
-      }
-    }
-
     let pendingCoords = null;
 
     map.on('click', (e) => {
@@ -1038,20 +968,11 @@
         if (editTreeId) updateFeature(editTreeId);
         return;
       }
-      pendingFeature = pendingFeatureOf(props, pendingCoords);
       if (addModeTarget === 'create') {
-        commitFeature();
+        createFeature(props);
       } else {
-        proposeFeature(pendingFeature);
+        proposeFeature(props);
       }
-    });
-
-    document.getElementById('btn-copy-json').addEventListener('click', () => {
-      const feature = pendingFeatureOf(collectFormValues(), pendingCoords);
-      navigator.clipboard?.writeText(JSON.stringify(feature, null, 2)).then(() => {
-        hideModal();
-        toast('✅ Bloc GeoJSON copié — colle-le dans <code>arbres.geojson</code> sans jeton.', false);
-      }, () => toast('⚠️ Copie impossible dans ce navigateur.'));
     });
 
     async function photoToBlob(file) {
@@ -1107,29 +1028,6 @@
         phErr.classList.add('visible');
         return;
       }
-    });
-
-    document.getElementById('btn-save-token').addEventListener('click', () => {
-      const input = document.getElementById('token-input');
-      if (!input.value.trim()) {
-        const err = document.getElementById('token-err');
-        err.textContent = 'Colle le jeton dans le champ.';
-        err.classList.add('visible');
-        return;
-      }
-      setToken(input.value);
-      pendingFeature = pendingFeature || pendingFeatureOf(collectFormValues(), pendingCoords);
-      commitFeature();
-    });
-
-    document.getElementById('btn-remove-token').addEventListener('click', () => {
-      setToken('');
-      hideModal();
-      toast('🔑 Jeton supprimé de ce navigateur.');
-    });
-
-    document.getElementById('btn-key').addEventListener('click', () => {
-      showTokenPanel(getToken() ? 'Un jeton est déjà enregistré dans ce navigateur. Colle-en un nouveau pour le remplacer.' : '');
     });
 
     document.getElementById('modal-close').addEventListener('click', hideModal);

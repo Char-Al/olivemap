@@ -6,7 +6,7 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 - **2 couleurs de points** : vert = arbre d'un particulier, bleu = arbre de la mairie
 - **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et le marqueur affiche **1, 2 ou 3 olives 🫒** selon le rendement, visible d'un coup d'œil sur la carte
 - Recherche plein texte + filtres par espèce et par propriétaire
-- Mode « nouveau point » : clic sur la carte → coordonnées + bloc GeoJSON copiés dans le presse-papiers
+- **Proposition d'un arbre par n'importe quel visiteur** (bouton ✋) : le point part dans la base Supabase et attend la validation d'un admin
 - Bouton de géolocalisation
 - Responsive, fonctionne sur mobile
 
@@ -38,12 +38,12 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v1`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v3`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
-- `arbres.geojson` est mis en cache → les arbres du dépôt restent consultables sans réseau ;
+- la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
 - les **tuiles OSM déjà visitées** restent affichées (cache limité à 400) ;
-- les données Supabase (validations, participations) exigent du réseau : hors-ligne, seule la carte du dépôt s'affiche, les erreurs Supabase sont silencieuses.
+- la base Supabase (participations, validations) exige du réseau : hors-ligne, le site bascule automatiquement sur la copie de sauvegarde.
 
 **Après une mise à jour du site** : recharge la page (2 fois) pour récupérer la nouvelle version. Si besoin, incrémente `CACHE = 'olivemap-vN'` dans `sw.js` pour forcer le nettoyage des anciens caches.
 
@@ -64,20 +64,15 @@ Crée ensuite le compte utilisateur correspondant **dans le tableau de bord Supa
 
 Pour ajouter **un autre admin** : crée d'abord son utilisateur dans *Authentication → Users → Add user* (email `pseudo@olivemap.claret` + mot de passe, à lui communiquer), puis ajoute simplement son pseudo dans la liste 👑 « Administrateurs ». Faute de la première étape, sa connexion sera refusée.
 
-La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les demandes, ni valider, ni gérer la liste. Les données du GeoJSON et de Supabase restent **fusionnées** à l'affichage.
+La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les demandes, ni valider, ni gérer la liste.
 
-## ➕ Créer un arbre directement depuis le site
+## ➕ Créer / proposer un arbre depuis le site
 
-1. Bouton **« ＋ Point »** → clic à l'endroit voulu sur la carte → un formulaire s'ouvre (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes)
-2. **« Créer l'arbre »** → l'arbre est ajouté au dépôt par une demande signée au nom de ton compte GitHub (un commit apparaît dans l'historique) et le site se met à jour au prochain déploiement (~1 min)
+**Visiteurs (bouton ✋)** : clic à l'endroit voulu sur la carte → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin.
 
-Au premier usage, le site demande un **jeton GitHub** (bouton 🔑 pour y revenir) :
+**Administrateurs (bouton ＋ Point)** : même formulaire, mais l'arbre est créé **directement avec le statut `valide`** dans Supabase — visible immédiatement par tout le monde, sans étape de validation ni jeton ni commit. Protégé côté base par la RLS : seuls les comptes listés dans la table `admins` peuvent créer, modifier ou supprimer un arbre valide.
 
-- crée-le sur [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) (Fine-grained)
-- **Repository access** : *Only select repositories* → `olivemap`
-- **Permissions** : Contents → *Read and write*
-
-Le jeton est stocké **uniquement dans ce navigateur** (localStorage) et ne part que vers l'API GitHub. Bouton **Supprimer** dans le panneau 🔑 pour l'effacer. Sans jeton, le bouton « Copier le JSON » du formulaire reste disponible pour l'ajout manuel.
+Aucun jeton GitHub, aucune clé secrète dans le navigateur : tout passe par Supabase (clé *publishable*, publique par conception).
 
 ## 🚀 Activer le site
 
@@ -86,13 +81,11 @@ Le jeton est stocké **uniquement dans ce navigateur** (localStorage) et ne part
 3. Attends ~1 minute : le site est en ligne sur
    `https://char-al.github.io/olivemap/`
 
-## ➕ Ajouter un arbre
+## 💾 `arbres.geojson` : copie de sauvegarde
 
-Les données vivent dans [`arbres.geojson`](arbres.geojson) : une entrée = un arbre.
+Les données vivent désormais **dans la base Supabase** ; le fichier [`arbres.geojson`](arbres.geojson) est **uniquement une copie de secours** : si la base est injoignable (coupure réseau, quotas…), le site affiche automatiquement la carte depuis ce fichier (lecture seule) avec un avertissement.
 
-**Depuis le téléphone / navigateur :** ouvre le site, active « ＋ Point », clique à l'endroit voulu — le bloc JSON est copié. Ensuite, sur GitHub, édite `arbres.geojson`, colle le bloc (avec la virgule) et commit. ~30 secondes.
-
-**À la main :**
+Structure d'une entrée :
 
 ```json
 {
