@@ -16,6 +16,7 @@ create table if not exists public.arbres (
   notes text,
   kids_friendly boolean not null default false,
   acces_pieton boolean not null default false,
+  ramassage timestamptz,
   lng double precision not null,
   lat double precision not null,
   statut text not null default 'attente' check (statut in ('attente','valide','rejete'))
@@ -23,7 +24,8 @@ create table if not exists public.arbres (
 
 alter table public.arbres
   add column if not exists kids_friendly boolean not null default false,
-  add column if not exists acces_pieton boolean not null default false;
+  add column if not exists acces_pieton boolean not null default false,
+  add column if not exists ramassage timestamptz;
 
 alter table public.arbres enable row level security;
 

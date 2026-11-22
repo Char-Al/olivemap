@@ -79,6 +79,7 @@ Les données vivent dans [`arbres.geojson`](arbres.geojson) : une entrée = un a
 - Tous les champs sauf `nom` sont optionnels ; ajoute tes propres clés, elles apparaîtront dans le popup
 - `kids_friendly` : `true` si l'arbre est adapté aux enfants (affiché 👶 dans le popup)
 - `acces_pieton` : `true` si l'accès est piéton uniquement (affiché 🚶 dans le popup)
+- `ramassage` : date/heure prévue de ramassage, format `"AAAA-MM-JTHH:MM"` (p. ex. `"2026-12-15T09:30"`) — affichée 🚚 dans le popup ; **une fois la date passée, le marqueur devient grisé** (opacity réduite) et le popup affiche ✅ Ramassé
 - Sur la carte, le bouton **« ＋ Point »** copie un bloc déjà rempli avec `type` et `production`
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
 - Pour une photo : héberge-la (p. ex. dans un dossier `photos/` du dépôt) et mets son URL

@@ -23,6 +23,7 @@
       "properties": {
         "nom": "Olivier du Parc",
         "type": "mairie",
+        "ramassage": "2026-10-12T09:00",
         "kids_friendly": true,
         "espece": "Olea europaea — Picholine",
         "hauteur_m": 6,
@@ -67,6 +68,7 @@
       "properties": {
         "nom": "Olivier de la Fontaine",
         "type": "particulier",
+        "ramassage": "2026-10-05T10:00",
         "acces_pieton": true,
         "espece": "Olea europaea — Picholine",
         "hauteur_m": 5,
@@ -112,6 +114,7 @@
       "properties": {
         "nom": "Olivier des Vignes",
         "type": "particulier",
+        "ramassage": "2026-12-15T09:30",
         "acces_pieton": true,
         "espece": "Olea europaea — Picholine",
         "hauteur_m": 6,
