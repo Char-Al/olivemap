@@ -4,7 +4,7 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 
 - Carte OpenStreetMap avec marqueurs cliquables (popup : propriétaire, rendement, espèce, hauteur, circonférence, année de plantation, état, notes, photo…)
 - **2 couleurs de points** : vert = arbre d'un particulier, bleu = arbre de la mairie
-- **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et la **taille de l'olive 🫒 dans le marqueur** s'agrandit avec le rendement
+- **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et le marqueur affiche **1, 2 ou 3 olives 🫒** selon le rendement, visible d'un coup d'œil sur la carte
 - Recherche plein texte + filtres par espèce et par propriétaire
 - Mode « nouveau point » : clic sur la carte → coordonnées + bloc GeoJSON copiés dans le presse-papiers
 - Bouton de géolocalisation
@@ -50,7 +50,7 @@ Les données vivent dans [`arbres.geojson`](arbres.geojson) : une entrée = un a
 
 - `coordinates` : **[longitude, latitude]** (ordre GeoJSON, pas lat/lng !)
 - `type` : `particulier` (point **vert**) ou `mairie` (point **bleu**)
-- `production` : échelle de **1 à 3** affichée en ●●○ (1 = peu d'olives, olive 🫒 petite sur la carte — 3 = arbre très productif, olive plus grosse)
+- `production` : échelle de **1 à 3** affichée en ●●○, et le marqueur arbore **1, 2 ou 3 olives 🫒** en conséquence
 - Tous les champs sauf `nom` sont optionnels ; ajoute tes propres clés, elles apparaîtront dans le popup
 - Sur la carte, le bouton **« ＋ Point »** copie un bloc déjà rempli avec `type` et `production`
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
