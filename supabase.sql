@@ -21,6 +21,11 @@ create table if not exists public.arbres (
 
 alter table public.arbres enable row level security;
 
+grant select, insert on public.arbres to anon;
+grant select, insert, update, delete on public.arbres to authenticated;
+
+alter table public.arbres enable row level security;
+
 drop policy if exists "lecture publique des arbres valides" on public.arbres;
 drop policy if exists "proposition publique d'un arbre" on public.arbres;
 
