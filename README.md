@@ -38,7 +38,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v6`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v7`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -68,7 +68,7 @@ La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les de
 
 ## 🙋 Proposer un arbre depuis le site
 
-**Visiteurs (bouton 🙋)** : clic à l'endroit voulu sur la carte → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin.
+**Visiteurs (bouton 🙋)** : clic à l'endroit voulu sur la carte → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin. Les admins connectés la voient **immédiatement sur la carte** (point en pointillés), sans recharger la page.
 
 Les admins peuvent ensuite **valider, modifier ou supprimer** chaque proposition directement depuis la popup de l'arbre sur la carte. Aucun jeton GitHub, aucune clé secrète dans le navigateur : tout passe par Supabase (clé *publishable*, publique par conception).
 

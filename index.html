@@ -870,7 +870,14 @@
         return;
       }
       hideModal();
-      toast(`🙏 Merci ! La proposition « <b>${p.nom}</b> » attend la validation.`, false);
+      if (isAdminUser) {
+        map.panTo([lat, lng]);
+        await load();
+        if (typeof loadAdminPanel === 'function') loadAdminPanel();
+        toast(`🫒 Proposition « <b>${p.nom}</b> » enregistrée — visible sur la carte (en pointillés) jusqu'à validation.`, false);
+      } else {
+        toast(`🙏 Merci ! La proposition « <b>${p.nom}</b> » attend la validation.`, false);
+      }
     }
 
     let pendingCoords = null;
