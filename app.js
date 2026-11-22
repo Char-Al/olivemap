@@ -106,7 +106,7 @@ function popupHtml(props, coords) {
   const mat = [
     props.besoin_echelle ? '🪜 Échelle' : null,
     props.besoin_caisses ? '🧺 Caisses' : null,
-    props.besoin_rateau ? '🍂 Râteau' : null,
+    props.besoin_rateau ? '🪮 Râteau' : null,
   ].filter(Boolean);
   if (mat.length) rows.push(['Matériel', mat.join(' · ')]);
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
@@ -617,7 +617,7 @@ function adminsRow(email, removable) {
 }
 
 const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🍂 râteau', deux: '🪜🧺 les deux' };
+const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🪮 râteau', deux: '🪜🧺 les deux' };
 
 async function loadParticipations(id, zone, quand) {
   if (!sb) return;
@@ -642,7 +642,7 @@ async function loadParticipations(id, zone, quand) {
         <option value="">de rien</option>
         <option value="echelle">🪜 échelle</option>
         <option value="caisses">🧺 caisses</option>
-        <option value="rateau">🍂 râteau</option>
+        <option value="rateau">🪮 râteau</option>
         <option value="deux">🪜🧺 les deux</option>
       </select>
       <input data-part-nb type="number" min="1" max="50" value="1" />
