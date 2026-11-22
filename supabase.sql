@@ -119,7 +119,7 @@ select tablename, policyname, cmd from pg_policies
 -- ============================================================
 create table if not exists public.participations (
   id bigint generated always as identity primary key,
-  arbre_id bigint not null references public.arbres (id) on delete cascade,
+  arbre_id uuid not null references public.arbres (id) on delete cascade,
   pseudo text not null,
   nb_personnes int not null default 1 check (nb_personnes between 1 and 50),
   cree_le timestamptz not null default now()

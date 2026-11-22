@@ -1254,8 +1254,8 @@
         at.innerHTML = '';
         at.appendChild(tbl);
         tbl.querySelectorAll('tr[data-id]').forEach((tr) => {
-          const id = Number(tr.dataset.id);
-          const row = every.find((t) => t.id === id);
+          const id = tr.dataset.id;
+          const row = every.find((t) => String(t.id) === id);
           tr.querySelector('[data-td="toggle"]').addEventListener('click', async () => {
             const ns = row.statut === 'valide' ? 'attente' : 'valide';
             const { error } = await sb.from('arbres').update({ statut: ns }).eq('id', id);
