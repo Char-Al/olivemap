@@ -72,8 +72,11 @@ function popupHtml(props, coords) {
   const rows = [];
   const actPending = props.statut === 'attente' && isAdminUser;
   const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
+  const geoLink = coords
+    ? `<a class="mini edit" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}">🧭 Itinéraire</a>`
+    : '';
   const shareRow = props.id && props.statut === 'valide'
-    ? `<div class="popup-actions"><button class="mini edit" data-share>🔗 Partager l'arbre</button></div>`
+    ? `<div class="popup-actions"><button class="mini edit" data-share>🔗 Partager l'arbre</button>${geoLink}</div>`
     : '';
   if (props.statut === 'attente') rows.push(['Validation', '\u23f3 En attente \u2014 visible des admins uniquement']);
   if (props.type || props.production) {
