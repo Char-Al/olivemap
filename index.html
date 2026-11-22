@@ -275,6 +275,7 @@
       <button id="btn-add" class="btn" title="Ajouter un arbre">＋ Point</button>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-key" class="btn" title="Jeton GitHub (pour créer des arbres)">🔑</button>
+      <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
     </div>
   </div>
 
@@ -292,7 +293,7 @@
       <button class="modal-close" id="modal-close" title="Fermer">✕</button>
 
       <div class="step" id="step-form">
-        <h2>🪒 Nouvel arbre</h2>
+        <h2 id="modal-title">🫒 Nouvel arbre</h2>
         <div class="coords-line" id="coords"></div>
         <form id="tree-form">
           <label>Nom *</label>
@@ -347,7 +348,7 @@
           <div class="err" id="form-err"></div>
           <div class="modal-actions">
             <button type="button" class="ghost" id="btn-copy-json">Copier le JSON</button>
-            <button type="submit" class="primary">Créer l'arbre</button>
+            <button type="submit" class="primary" id="btn-submit-form">Créer l'arbre</button>
           </div>
         </form>
       </div>
@@ -373,6 +374,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const DEFAULT_VIEW = { center: [43.8619, 3.9047], zoom: 16 };
     const OWNER_COLORS = { mairie: '#4a8fc7', particulier: '#7fb069' };
@@ -381,6 +383,12 @@
     const BRANCH = 'main';
     const DATA_PATH = 'arbres.geojson';
     const TOKEN_KEY = 'olivemap_token';
+    const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YmJ3c3ZndnRtenJxbmtkaHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNTA3OTYsImV4cCI6MjExMDkyNjc5Nn0.bJSE4Q5UDnyHQfr_BfWGNy1Tl1BPvL_C58q9AfdOylo';
+    let sb = null;
+    try {
+      if (typeof supabase !== 'undefined') sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) { sb = null; }
 
     const map = L.map('map', { zoomControl: false }).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -501,10 +509,35 @@
       if (autohide) setTimeout(() => el.classList.remove('visible'), 6000);
     }
 
+    function rowToFeature(r) {
+      const p = {};
+      const props = ['nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes'];
+      props.forEach((k) => {
+        if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
+          p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
+        }
+      });
+      return { type: 'Feature', properties: p, geometry: { type: 'Point', coordinates: [Number(r.lng), Number(r.lat)] } };
+    }
+
     async function load() {
-      const res = await fetch('arbres.geojson');
-      const data = await res.json();
-      allFeatures = (data.features || []).filter((f) => f.geometry && f.geometry.type === 'Point');
+      const features = [];
+      try {
+        const res = await fetch('arbres.geojson');
+        const data = await res.json();
+        features.push(...(data.features || []).filter((f) => f.geometry && f.geometry.type === 'Point'));
+      } catch (e) { /* geojson indisponible */ }
+
+      if (sb) {
+        try {
+          const { data: rows, error } = await sb.from('arbres').select('*').eq('statut', 'valide');
+          if (!error && Array.isArray(rows)) {
+            rows.forEach((r) => features.push(rowToFeature(r)));
+          }
+        } catch (e) { /* table absente : geojson seul */ }
+      }
+
+      allFeatures = features;
 
       const species = [...new Set(allFeatures.map((f) => (f.properties || {}).espece).filter(Boolean))].sort();
       const sel = document.getElementById('filter-species');
@@ -541,8 +574,16 @@
       addBadge.classList.toggle('visible', addMode);
       document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
     }
-    btnAdd.addEventListener('click', () => toggleAdd());
+    let addModeTarget = 'create';
+    const btnPropose = document.getElementById('btn-propose');
+    btnAdd.addEventListener('click', () => { addModeTarget = 'create'; toggleAdd(); });
+    btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; toggleAdd(); });
     addBadge.addEventListener('click', () => toggleAdd(false));
+
+    function setFormMode(target) {
+      document.getElementById('modal-title').textContent = target === 'create' ? '🫒 Nouvel arbre' : '🙋 Proposer un arbre';
+      document.getElementById('btn-submit-form').textContent = target === 'create' ? "Créer l'arbre" : 'Envoyer la proposition';
+    }
 
     function showStep(name) {
       ['form', 'token', 'commit'].forEach((s) => {
@@ -629,6 +670,42 @@
       input.focus();
     }
 
+    async function proposeFeature(feature) {
+      if (!sb) {
+        toast('⚠️ Service de proposition indisponible — utilise « Copier le JSON ».', false);
+        return;
+      }
+      showStep('commit');
+      document.getElementById('commit-msg').textContent = 'Envoi de la proposition…';
+      const p = feature.properties;
+      const [lng, lat] = feature.geometry.coordinates;
+      const { error } = await sb.from('arbres').insert({
+        nom: p.nom,
+        type: p.type,
+        production: p.production,
+        etat: p.etat,
+        espece: p.espece || null,
+        hauteur_m: p.hauteur_m || null,
+        circonference_cm: p.circonference_cm || null,
+        annee_plantation: p.annee_plantation || null,
+        photo: p.photo || null,
+        notes: p.notes || null,
+        lng,
+        lat,
+        statut: 'attente',
+      });
+      if (error) {
+        hideModal();
+        const missing = /PGRST205|does not exist|relation/i.test(error.message || '');
+        toast(missing
+          ? '⚠️ Table non créée : exécute <code>supabase.sql</code> dans le SQL Editor du projet Supabase.'
+          : `Échec de l'envoi : ${error.message}`, false);
+        return;
+      }
+      hideModal();
+      toast(`🙏 Merci ! La proposition « <b>${p.nom}</b> » attend la validation.`, false);
+    }
+
     let pendingFeature = null;
 
     async function commitFeature() {
@@ -648,7 +725,7 @@
         render();
         hideModal();
         map.panTo([pendingFeature.geometry.coordinates[1], pendingFeature.geometry.coordinates[0]]);
-        toast(`🪒 <b>${pendingFeature.properties.nom}</b> créé ! <a href="${url}" target="_blank">Voir le commit</a> — visible sur le site dans ~1 min.`, false);
+        toast(`🫒 <b>${pendingFeature.properties.nom}</b> créé ! <a href="${url}" target="_blank">Voir le commit</a> — visible sur le site dans ~1 min.`, false);
       } catch (err) {
         if (err.status === 401 || err.status === 403) {
           showTokenPanel("Jeton invalide ou sans droit d'écriture sur le dépôt. Vérifie-le ou recrée-le.");
@@ -665,6 +742,7 @@
       if (!addMode) return;
       toggleAdd(false);
       pendingCoords = [e.latlng.lng, e.latlng.lat];
+      setFormMode(addModeTarget);
       document.getElementById('coords').textContent = `[${e.latlng.lng.toFixed(6)}, ${e.latlng.lat.toFixed(6)}]`;
       document.getElementById('form-err').classList.remove('visible');
       showStep('form');
@@ -680,7 +758,11 @@
         return;
       }
       pendingFeature = pendingFeatureOf(props, pendingCoords);
-      commitFeature();
+      if (addModeTarget === 'create') {
+        commitFeature();
+      } else {
+        proposeFeature(pendingFeature);
+      }
     });
 
     document.getElementById('btn-copy-json').addEventListener('click', () => {

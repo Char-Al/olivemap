@@ -14,6 +14,18 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 
 Les 10 oliviers d'exemple sont placés à **Claret (34270)** autour du village.
 
+## ☁️ Supabase — propositions ouvertes aux visiteurs
+
+Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans compte GitHub** : le point est enregistré dans une base Supabase avec le statut `attente`, puis affiché sur la carte dès que **tu le valides**.
+
+**Mise en place (une fois, ~2 min) :**
+
+1. Crée un projet gratuit sur [supabase.com](https://supabase.com)
+2. Ouvre le **SQL Editor** du projet et exécute le script [`supabase.sql`](supabase.sql) (table + règles de sécurité RLS : lecture publique des arbres `valide`, insertion publique seulement en `attente`)
+3. C'est tout — l'URL du projet et la clé `anon` (publique par conception) sont déjà dans `index.html`
+
+**Valider une proposition :** Table Editor → table `arbres` → ligne en `attente` → changer `statut` en `valide`. La carte se met à jour au chargement suivant. Les données du GeoJSON et de Supabase sont **fusionnées** à l'affichage.
+
 ## ➕ Créer un arbre directement depuis le site
 
 1. Bouton **« ＋ Point »** → clic à l'endroit voulu sur la carte → un formulaire s'ouvre (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes)
