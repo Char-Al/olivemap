@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content=" Olivemap — carte interactive d'arbres avec leurs informations." />
+  <title>Olivemap</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #101512;
+      --panel: #171d19;
+      --panel-2: #1e2620;
+      --border: #2b362e;
+      --text: #e8eee8;
+      --text-dim: #9aa79c;
+      --accent: #7fb069;
+      --accent-strong: #5c8f4a;
+      --danger: #e07a5f;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg); color: var(--text);
+      overscroll-behavior: none;
+    }
+
+    #map { position: absolute; inset: 0; background: var(--bg); }
+
+    /* ---- Barre supérieure ---- */
+    .topbar {
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      z-index: 1000;
+      display: flex; gap: 8px; flex-wrap: wrap;
+      pointer-events: none;
+    }
+    .brand {
+      pointer-events: auto;
+      display: flex; align-items: center; gap: 8px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 14px;
+      font-weight: 700; font-size: 15px; letter-spacing: .3px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    }
+    .brand .dot { color: var(--accent); }
+    .controls {
+      pointer-events: auto;
+      display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto;
+    }
+    select.search, .btn {
+      background: var(--panel); color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px; font-size: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.35);
+      outline: none;
+    }
+    .search {
+      min-width: 170px;
+      background: var(--panel);
+    }
+    .search:focus { border-color: var(--accent); }
+    .btn {
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .btn:hover { background: var(--panel-2); border-color: var(--accent); }
+    .btn:active { transform: scale(.96); }
+    .btn.active { background: var(--accent-strong); border-color: var(--accent); color: #fff; }
+
+    /* ---- Compteur ---- */
+    .counter {
+      position: absolute; bottom: 12px; left: 12px;
+      z-index: 1000;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 12px; font-size: 13px; color: var(--text-dim);
+      box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    }
+    .counter b { color: var(--accent); }
+
+    /* ---- Aide "nouveau point" ---- */
+    .add-badge {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      z-index: 1000;
+      background: var(--accent-strong); color: #fff;
+      border-radius: 999px; padding: 8px 16px;
+      font-size: 13px; font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      display: none; cursor: pointer;
+    }
+    .add-badge.visible { display: block; }
+
+    /* ---- Popups ---- */
+    .leaflet-popup-content-wrapper {
+      background: var(--panel); color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    }
+    .leaflet-popup-tip { background: var(--panel); border: 1px solid var(--border); }
+    .leaflet-popup-content { margin: 14px 16px; }
+    .leaflet-container a.leaflet-popup-close-button {
+      color: var(--text-dim); padding: 6px 6px 0 0;
+    }
+    .popup { min-width: 220px; max-width: 260px; }
+    .popup h3 {
+      margin: 0 0 2px; font-size: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .popup .species {
+      color: var(--accent); font-size: 12px; font-style: italic;
+      margin-bottom: 10px;
+    }
+    .popup img {
+      width: 100%; border-radius: 8px; margin-bottom: 10px;
+      display: block;
+    }
+    .popup dl {
+      display: grid; grid-template-columns: auto 1fr;
+      gap: 4px 12px; margin: 0; font-size: 13px;
+    }
+    .popup dt { color: var(--text-dim); }
+    .popup dd { margin: 0; }
+    .popup .notes {
+      margin-top: 10px; padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--text-dim);
+    }
+    .popup .photos {
+      font-size: 14px; font-weight: bold; color: var(--danger);
+    }
+
+    .state-badge {
+      display: inline-block; padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+    }
+    .state-bon { background: #2f5d3e; color: #c8f2d0; }
+    .state-moyen { background: #7a622e; color: #f7e8b5; }
+    .state-mauvais { background: #7a3630; color: #f7c5c0; }
+
+    /* ---- Marqueurs ---- */
+    .tree-marker { background: none; border: none; }
+    .tree-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 46px;
+      transition: filter .15s;
+    }
+    .tree-icon svg { width: 100%; height: 100%; }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+      z-index: 2000;
+      background: var(--panel-2); border: 1px solid var(--accent);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 10px 14px; font-size: 13px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      max-width: min(560px, calc(100vw - 24px));
+      display: none;
+    }
+    .toast.visible { display: block; }
+    .toast code {
+      background: #0d120e; border-radius: 6px; padding: 2px 6px;
+      font-size: 12px; user-select: all;
+    }
+
+    @media (max-width: 600px) {
+      .brand span.title { font-size: 14px; }
+      .search { min-width: 0; flex: 1; }
+      .topbar { left: 8px; right: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <div class="topbar">
+    <div class="brand"><span class="dot">●</span><span class="title">Olivemap</span></div>
+    <div class="controls">
+      <input type="text" id="search" class="search" placeholder="Rechercher…" autocomplete="off" />
+      <select id="filter-species" class="search">
+        <option value="">Toutes les espèces</option>
+      </select>
+      <button id="btn-add" class="btn" title="Ajouter un arbre">＋ Point</button>
+      <button id="btn-locate" class="btn" title="Me localiser">📍</button>
+    </div>
+  </div>
+
+  <div class="counter" id="counter"></div>
+  <div class="add-badge" id="add-badge">Cliquez sur la carte pour choisir l'emplacement — annuler</div>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const DEFAULT_VIEW = { center: [43.2965, 5.3698], zoom: 15 };
+
+    const map = L.map('map', { zoomControl: false }).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const stateLabels = { 'bon': 'Bon état', 'moyen': 'Moyen', 'mauvais': 'Mauvais état' };
+    let markers = [];
+    let addMode = false;
+
+    function markerIcon() {
+      return L.divIcon({
+        className: 'tree-marker',
+        html: `<div class="tree-icon"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="#7fb069" stroke-width="2"/>
+          <text x="17" y="20" text-anchor="middle" font-size="14" fill="#7fb069">🫒</text>
+        </svg></div>`,
+        iconSize: [34, 46],
+        iconAnchor: [17, 44],
+        popupAnchor: [0, -44],
+      });
+    }
+
+    function popupHtml(props) {
+      const rows = [];
+      if (props.hauteur_m) rows.push(['Hauteur', `${props.hauteur_m} m`]);
+      if (props.circonference_cm) rows.push(['Circonférence', `${props.circonference_cm} cm`]);
+      if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
+      if (props.etat) {
+        const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || props.etat}</span>`]);
+      }
+      for (const [k, v] of Object.entries(props)) {
+        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji'].includes(k) && v != null && v !== '') {
+          rows.push([k, String(v)]);
+        }
+      }
+      return `<div class="popup">
+        <h3>${props.emoji || '🫒'} ${props.nom || 'Sans nom'}</h3>
+        ${props.espece ? `<div class="species">${props.espece}</div>` : ''}
+        ${props.photo ? `<img src="${props.photo}" alt="${props.nom || ''}" onerror="this.style.display='none'"/>` : ''}
+        ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
+        ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
+      </div>`;
+    }
+
+    function visibleFeatures() {
+      const q = document.getElementById('search').value.trim().toLowerCase();
+      const sp = document.getElementById('filter-species').value;
+      return allFeatures.filter((f) => {
+        const p = f.properties || {};
+        if (sp && (p.espece || '') !== sp) return false;
+        if (q) {
+          const blob = Object.values(p).join(' ').toLowerCase();
+          if (!blob.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function render() {
+      markers.forEach(({ marker }) => map.removeLayer(marker));
+      markers = [];
+      const feats = visibleFeatures();
+      feats.forEach((f) => {
+        const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon() });
+        marker.bindPopup(popupHtml(f.properties), { maxWidth: 280 });
+        markers.push({ marker });
+        marker.addTo(map);
+      });
+      document.getElementById('counter').innerHTML =
+        `<b>${feats.length}</b> arbre${feats.length > 1 ? 's' : ''} sur ${allFeatures.length}`;
+    }
+
+    function toast(html, autohide = true) {
+      const el = document.getElementById('toast');
+      el.innerHTML = html;
+      el.classList.add('visible');
+      if (autohide) setTimeout(() => el.classList.remove('visible'), 6000);
+    }
+
+    async function load() {
+      const res = await fetch('arbres.geojson');
+      const data = await res.json();
+      allFeatures = (data.features || []).filter((f) => f.geometry && f.geometry.type === 'Point');
+
+      const species = [...new Set(allFeatures.map((f) => (f.properties || {}).espece).filter(Boolean))].sort();
+      const sel = document.getElementById('filter-species');
+      species.forEach((s) => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        sel.appendChild(opt);
+      });
+
+      if (allFeatures.length === 1) {
+        map.setView([allFeatures[0].geometry.coordinates[1], allFeatures[0].geometry.coordinates[0]], 16);
+      } else if (allFeatures.length > 1) {
+        map.fitBounds(L.latLngBounds(allFeatures.map((f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]])).pad(0.25));
+      }
+
+      render();
+    }
+
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('filter-species').addEventListener('change', render);
+
+    document.getElementById('btn-locate').addEventListener('click', () => {
+      map.locate({ setView: true, maxZoom: 16 });
+    });
+    map.on('locationfound', () => toast('📍 Position trouvée.'));
+    map.on('locationerror', () => toast('⚠️ Localisation impossible (autorisation refusée ?).'));
+
+    const btnAdd = document.getElementById('btn-add');
+    const addBadge = document.getElementById('add-badge');
+    function toggleAdd(on) {
+      addMode = on === undefined ? !addMode : on;
+      btnAdd.classList.toggle('active', addMode);
+      addBadge.classList.toggle('visible', addMode);
+      document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
+    }
+    btnAdd.addEventListener('click', () => toggleAdd());
+    addBadge.addEventListener('click', () => toggleAdd(false));
+
+    map.on('click', (e) => {
+      if (!addMode) return;
+      toggleAdd(false);
+      const lat = e.latlng.lat, lng = e.latlng.lng;
+      const snippet = `{
+  "type": "Feature",
+  "properties": {
+    "nom": "?",
+    "espece": "",
+    "notes": ""
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates": [${lng.toFixed(6)}, ${lat.toFixed(6)}]
+  }
+}`;
+      navigator.clipboard?.writeText(snippet).then(
+        () => toast(`✅ Coordonnées copiées : <code>[${lng.toFixed(6)}, ${lat.toFixed(6)}]</code><br/>Collez le bloc dans <code>arbres.geojson</code> pour créer l'arbre.`),
+        () => toast(`📌 <code>[${lng.toFixed(6)}, ${lat.toFixed(6)}]</code>`)
+      );
+    });
+
+    load().catch(() => {
+      toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);
+    });
+  </script>
+</body>
+</html>

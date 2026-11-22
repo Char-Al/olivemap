@@ -1,0 +1,82 @@
+{
+  "type": "FeatureCollection",
+  "name": "arbres",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier du Mail I",
+        "espece": "Olea europaea",
+        "hauteur_m": 5,
+        "circonference_cm": 145,
+        "annee_plantation": 1932,
+        "etat": "bon",
+        "notes": "Grand sujet remarquable, couronne équilibrée."
+      },
+      "geometry": { "type": "Point", "coordinates": [5.3688, 43.2951] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier du Mail II",
+        "espece": "Olea europaea",
+        "hauteur_m": 4,
+        "circonference_cm": 98,
+        "annee_plantation": 1986,
+        "etat": "bon"
+      },
+      "geometry": { "type": "Point", "coordinates": [5.3701, 43.2963] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Olivier du jardin",
+        "espece": "Olea europaea var. sylvestris",
+        "hauteur_m": 3,
+        "circonference_cm": 62,
+        "annee_plantation": 2004,
+        "etat": "moyen",
+        "notes": "Taille de formation à prévoir à l'automne."
+      },
+      "geometry": { "type": "Point", "coordinates": [5.3715, 43.2977] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Platane de l'avenue",
+        "espece": "Platanus x acerifolia",
+        "hauteur_m": 22,
+        "circonference_cm": 310,
+        "annee_plantation": 1901,
+        "etat": "moyen",
+        "notes": "Élagage sanitaire effectué en 2023."
+      },
+      "geometry": { "type": "Point", "coordinates": [5.3734, 43.2948] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Micocoulier du parc",
+        "espece": "Celtis australis",
+        "hauteur_m": 12,
+        "circonference_cm": 180,
+        "annee_plantation": 1958,
+        "etat": "bon"
+      },
+      "geometry": { "type": "Point", "coordinates": [5.3669, 43.2982] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nom": "Pistachier sauvage",
+        "espece": "Pistacia terebinthus",
+        "hauteur_m": 3,
+        "circonference_cm": 40,
+        "annee_plantation": 2015,
+        "etat": "mauvais",
+        "notes": "Souffre de la sécheresse, arrosage mensuel en été."
+      },
+      "geometry": { "type": "Point", "coordinates": [5.3652, 43.2935] }
+    }
+  ]
+}
