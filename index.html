@@ -417,20 +417,14 @@
 
       <div class="step" id="step-login">
         <h2>👑 Espace admin</h2>
-        <p class="hint">Connexion sans mot de passe : entre ton email, tu recevras un code à 6 chiffres. Il doit figurer dans la liste des administrateurs.</p>
-        <label>Email</label>
-        <input id="a-email" type="email" placeholder="prenom@exemple.fr" autocomplete="username" />
+        <p class="hint">Connecte-toi avec ton identifiant et ton mot de passe. Ton identifiant doit figurer dans la liste des administrateurs.</p>
+        <label>Identifiant</label>
+        <input id="a-user" type="text" placeholder="pseudo" autocomplete="username" />
+        <label>Mot de passe</label>
+        <input id="a-pass" type="password" placeholder="Mot de passe" autocomplete="current-password" />
         <div class="err" id="login-err"></div>
         <div class="modal-actions">
-          <button type="button" class="primary" id="btn-code">Recevoir un code</button>
-        </div>
-        <div id="code-row" style="display:none">
-          <label>Code reçu par email</label>
-          <input id="a-code" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code" />
-          <div class="modal-actions">
-            <button type="button" class="ghost" id="btn-code-again">Renvoyer</button>
-            <button type="button" class="primary" id="btn-verify">Se connecter</button>
-          </div>
+          <button type="button" class="primary" id="btn-signin">Se connecter</button>
         </div>
       </div>
 
@@ -442,7 +436,7 @@
         <h3>Administrateurs</h3>
         <div id="admins-list"></div>
         <div id="add-admin-row">
-          <input id="new-admin-email" type="email" placeholder="prenom@exemple.fr" />
+          <input id="new-admin-pseudo" type="text" placeholder="pseudo du nouvel admin" />
           <button type="button" id="btn-add-admin">+</button>
         </div>
         <div class="modal-actions">
@@ -463,6 +457,7 @@
     const BRANCH = 'main';
     const DATA_PATH = 'arbres.geojson';
     const TOKEN_KEY = 'olivemap_token';
+    const ADMIN_EMAIL_DOMAIN = '@olivemap.claret';
     const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_kYKGqGknRPqJyJemHVVNLw_jYRT_N4R';
     let sb = null;
@@ -916,19 +911,19 @@
       } catch (e) { isAdminUser = false; }
       const b = document.getElementById('btn-admin');
       b.classList.toggle('active', isAdminUser);
-      b.title = isAdminUser ? `Espace admin (${currentEmail})` : 'Espace admin';
+      b.title = isAdminUser ? `Espace admin (${pseudoOf(currentEmail)})` : 'Espace admin';
       return isAdminUser;
     }
 
     function adminsRow(email, removable) {
       const row = document.createElement('div');
       row.className = 'admin-row';
-      row.innerHTML = `<span>\u{1F451} ${email}${removable ? '' : ' (toi)'}</span>${removable ? `<button class="mini no" data-e="${email}">\u{1F5D1} Effacer</button>` : ''}`;
+      row.innerHTML = `<span>\u{1F451} ${pseudoOf(email)}${removable ? '' : ' (toi)'}</span>${removable ? `<button class="mini no" data-e="${email}">\u{1F5D1} Effacer</button>` : ''}`;
       if (removable) {
         row.querySelector('button').addEventListener('click', async () => {
           const { error } = await sb.from('admins').delete().eq('email', email);
           if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-          toast(`\u{1F451} ${email} n'est plus administrateur.`);
+          toast(`\u{1F451} ${pseudoOf(email)} n'est plus administrateur.`);
           loadAdminPanel();
         });
       }
@@ -937,7 +932,7 @@
 
     async function loadAdminPanel() {
       document.getElementById('admin-info').textContent =
-        `Connect\u00e9 : ${currentEmail || '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
+        `Connect\u00e9 : ${currentEmail ? pseudoOf(currentEmail) : '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
       const pl = document.getElementById('pending-list');
       const al = document.getElementById('admins-list');
       pl.innerHTML = '';
@@ -993,49 +988,16 @@
       return message;
     }
 
-    let otpEmail = null;
-
-    async function sendCode() {
-      const err = document.getElementById('login-err');
-      const email = document.getElementById('a-email').value.trim();
-      if (!email || !email.includes('@')) {
-        err.textContent = 'Entre un email valide.';
-        err.classList.add('visible');
-        return;
-      }
-      err.classList.remove('visible');
-      const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-      if (error) {
-        err.textContent = /not allowed|not found|signups|disabled/i.test(error.message)
-          ? 'Aucun compte existant pour cet email. Demande à un administrateur de te créer un accès.'
-          : 'Envoi impossible : ' + error.message;
-        err.classList.add('visible');
-        return;
-      }
-      otpEmail = email;
-      document.getElementById('code-row').style.display = '';
-      document.getElementById('btn-code').textContent = 'Code envoyé ✓';
-      document.getElementById('a-code').focus();
+    function pseudoOf(email) {
+      return (email || '').split('@')[0];
     }
 
-    async function verifyCode() {
-      if (!otpEmail) return;
-      const err = document.getElementById('login-err');
-      const token = document.getElementById('a-code').value.trim();
-      if (!token) return;
-      const { error } = await sb.auth.verifyOTP({ email: otpEmail, token, type: 'email' });
-      if (error) {
-        err.textContent = /invalid|expired/i.test(error.message)
-          ? 'Code invalide ou expiré — renvoie-en un.'
-          : authErr(error.message);
-        err.classList.add('visible');
-        return;
-      }
-      err.classList.remove('visible');
-      otpEmail = null;
-      await refreshAdminState();
-      showStep('admin');
-      loadAdminPanel();
+    function readLogin() {
+      const pseudo = document.getElementById('a-user').value.trim().toLowerCase();
+      return {
+        email: pseudo + ADMIN_EMAIL_DOMAIN,
+        password: document.getElementById('a-pass').value,
+      };
     }
 
     document.getElementById('btn-admin').addEventListener('click', async () => {
@@ -1045,32 +1007,33 @@
       else { showStep('login'); }
     });
 
-    document.getElementById('btn-code').addEventListener('click', sendCode);
-
-    document.getElementById('btn-verify').addEventListener('click', verifyCode);
-
-    document.getElementById('a-email').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendCode();
+    document.getElementById('btn-signin').addEventListener('click', async () => {
+      const err = document.getElementById('login-err');
+      const { error } = await sb.auth.signInWithPassword(readLogin());
+      if (error) { err.textContent = authErr(error.message); err.classList.add('visible'); return; }
+      err.classList.remove('visible');
+      await refreshAdminState();
+      showStep('admin');
+      loadAdminPanel();
     });
 
-    document.getElementById('a-code').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') verifyCode();
+    document.getElementById('a-user').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('a-pass').focus();
     });
 
-    document.getElementById('btn-code-again').addEventListener('click', async () => {
-      document.getElementById('code-row').style.display = 'none';
-      document.getElementById('btn-code').textContent = 'Recevoir un code';
-      otpEmail = null;
-      await sendCode();
+    document.getElementById('a-pass').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btn-signin').click();
     });
 
     document.getElementById('btn-add-admin').addEventListener('click', async () => {
-      const v = document.getElementById('new-admin-email').value.trim().toLowerCase();
-      if (!v) return;
+      const raw = document.getElementById('new-admin-pseudo').value.trim().toLowerCase();
+      const v = raw + ADMIN_EMAIL_DOMAIN;
+      if (!raw) return;
+      if (!/^[a-z0-9._-]+$/.test(raw)) { toast('\u26a0\ufe0f Pseudo invalide : lettres, chiffres, point, tiret.', false); return; }
       const { error } = await sb.from('admins').insert({ email: v });
       if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-      document.getElementById('new-admin-email').value = '';
-      toast(`\u{1F451} ${v} est maintenant administrateur.`);
+      document.getElementById('new-admin-pseudo').value = '';
+      toast(`\u{1F451} ${raw} est maintenant administrateur (compte syst\u00e8me ${v}).`);
       loadAdminPanel();
     });
 

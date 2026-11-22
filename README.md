@@ -28,17 +28,17 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 **👑 Panneau admin (bouton 👑 du site)**
 
-- Connexion **sans mot de passe** : email → tu reçois un **code à 6 chiffres** (OTP Supabase) → connecté. Aucun mot de passe n'est stocké ni transmis.
+- Connexion par **identifiant (pseudo) + mot de passe** — pas d'email affiché. Le pseudo est mappé en interne vers le compte système Supabase `pseudo@olivemap.claret`. Le mot de passe n'est jamais stocké en clair (bcrypt + sel, côté Supabase).
 - Voir les **demandes en attente**, définir une date de ramassage, **valider** ✅ ou **rejeter** 🗑️ en un clic
-- **Gérer les administrateurs** : ajouter un email (`＋`) ou en retirer — le premier admin doit néanmoins être inséré à la main : dans le SQL Editor, décommente la section 7 de `supabase.sql` avec ton email :
+- **Gérer les administrateurs** : ajouter un pseudo (`＋`) ou en retirer — le premier admin doit néanmoins être inséré à la main : dans le SQL Editor, décommente la section 7 de `supabase.sql` avec ton pseudo (sous la forme du compte système) :
 
 ```sql
-insert into public.admins (email) values ('ton.email@exemple.fr') on conflict (email) do nothing;
+insert into public.admins (email) values ('ton-pseudo@olivemap.claret') on conflict (email) do nothing;
 ```
 
-Crée ensuite le compte utilisateur correspondant **dans le tableau de bord Supabase** (il n'y a volontairement pas de bouton d'inscription sur le site) : *Authentication → Users → Add user*, avec **le même email** — laisse Supabase générer le mot de passe (inutile de le retenir : la connexion se fait par code email, et Supabase ne stocke jamais ce mot de passe en clair, mais bcrypt + sel). Puis sur le site : bouton 👑 → ton email → **Recevoir un code** → le code à 6 chiffres reçu → connecté, tu es admin.
+Crée ensuite le compte utilisateur correspondant **dans le tableau de bord Supabase** (il n'y a volontairement pas de bouton d'inscription sur le site) : *Authentication → Users → Add user*, avec comme email **`ton-pseudo@olivemap.claret`** (exactement, suffixe compris) et **le mot de passe de ton choix** — c'est celui que tu taperas sur le site. Supabase le stocke haché (bcrypt), jamais en clair. Puis sur le site : bouton 👑 → ton pseudo + mot de passe → **Se connecter** → tu es admin.
 
-Pour ajouter **un autre admin** : crée d'abord son utilisateur dans *Authentication → Users → Add user*, puis ajoute son email dans la liste 👑 « Administrateurs ».
+Pour ajouter **un autre admin** : crée d'abord son utilisateur dans *Authentication → Users → Add user* (email `pseudo@olivemap.claret` + mot de passe, à lui communiquer), puis ajoute simplement son pseudo dans la liste 👑 « Administrateurs ». Faute de la première étape, sa connexion sera refusée.
 
 La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les demandes, ni valider, ni gérer la liste. Les données du GeoJSON et de Supabase restent **fusionnées** à l'affichage.
 

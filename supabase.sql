@@ -105,7 +105,9 @@ create policy "un admin retire un autre admin"
 -- Remplace l'email ci-dessous par le tien (celui avec lequel
 -- tu te connecteras), puis exécute.
 -- ============================================================
--- insert into public.admins (email) values ('ton.email@exemple.fr')
+-- Le mot de passe se règle dans Dashboard → Authentication → Users → Add user,
+-- avec l'email système : ton-pseudo@olivemap.claret
+-- insert into public.admins (email) values ('ton-pseudo@olivemap.claret')
 --   on conflict (email) do nothing;
 
 -- Vérification : doit lister les policies en place
