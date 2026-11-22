@@ -30,6 +30,23 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 **📷 Photo réelle** : dans le formulaire (modes créer/modifier, donc admins), le bouton « 📷 Prendre / choisir une photo » ouvre l’appareil photo du téléphone, **redimensionne l’image à 1024 px** et l’envoie dans le bucket public Supabase Storage `photos` ; l’URL obtenue remplit automatiquement le champ photo (les visiteurs qui proposent un arbre collent une URL). Nécessite la section 9 de `supabase.sql` (bucket + politiques).
 
+## 📲 Application installable + hors-ligne (PWA)
+
+Olivemap est installable comme une vraie application :
+
+- **Android/Chrome** : menu ⊝ → ⋮ → « Installer l'application » (ou la bannière 📲) ;
+- **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
+- **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
+
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v1`) :
+
+- l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
+- `arbres.geojson` est mis en cache → les arbres du dépôt restent consultables sans réseau ;
+- les **tuiles OSM déjà visitées** restent affichées (cache limité à 400) ;
+- les données Supabase (validations, participations) exigent du réseau : hors-ligne, seule la carte du dépôt s'affiche, les erreurs Supabase sont silencieuses.
+
+**Après une mise à jour du site** : recharge la page (2 fois) pour récupérer la nouvelle version. Si besoin, incrémente `CACHE = 'olivemap-vN'` dans `sw.js` pour forcer le nettoyage des anciens caches.
+
 **👑 Panneau admin (bouton 👑 du site)**
 
 - Connexion par **identifiant (pseudo) + mot de passe** — pas d'email affiché. Le pseudo est mappé en interne vers le compte système Supabase `pseudo@olivemap.claret`. Le mot de passe n'est jamais stocké en clair (bcrypt + sel, côté Supabase).

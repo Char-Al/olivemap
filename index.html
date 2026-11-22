@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="description" content=" Olivemap — carte interactive d'arbres avec leurs informations." />
+  <meta name="theme-color" content="#101512" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <title>Olivemap</title>
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1372,6 +1376,15 @@
     bootAdmin.finally(() => load()).catch(() => {
       toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);
     });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(() => {
+          if (window.matchMedia('(display-mode: standalone)').matches) return;
+          toast('📲 Olivemap peut être installé sur ton écran d\'accueil !', false);
+        }).catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>
