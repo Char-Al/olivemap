@@ -97,10 +97,15 @@ function popupHtml(props) {
     'Jour',
     props.jour === 1 ? '🟠 Jour 1' : '🔵 Jour 2',
   ]);
+  const mat = [
+    props.besoin_echelle ? '🪜 Échelle' : null,
+    props.besoin_caisses ? '🧺 Caisses' : null,
+  ].filter(Boolean);
+  if (mat.length) rows.push(['Matériel', mat.join(' · ')]);
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
-    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id'].includes(k) && v != null && v !== '') {
+    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses'].includes(k) && v != null && v !== '') {
       rows.push([esc(k), esc(String(v))]);
     }
   }
@@ -213,7 +218,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -335,6 +340,10 @@ function collectFormValues() {
   if (document.getElementById('f-kids').checked) props.kids_friendly = true;
   if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
   if (addModeTarget !== 'propose') {
+    props.besoin_echelle = document.getElementById('f-echelle').checked;
+    props.besoin_caisses = document.getElementById('f-caisses').checked;
+  }
+  if (addModeTarget !== 'propose') {
     const j = parseInt(document.getElementById('f-jour').value, 10);
     if (j === 1 || j === 2) props.jour = j;
   }
@@ -364,6 +373,8 @@ function fillForm(props) {
   document.getElementById('f-notes').value = props.notes || '';
   document.getElementById('f-kids').checked = !!props.kids_friendly;
   document.getElementById('f-pieton').checked = !!props.acces_pieton;
+  document.getElementById('f-echelle').checked = !!props.besoin_echelle;
+  document.getElementById('f-caisses').checked = !!props.besoin_caisses;
   document.getElementById('f-jour').value = props.jour ? String(props.jour) : '';
   document.getElementById('f-ramassage').value = props.ramassage ? localDT(props.ramassage) : '';
 }
@@ -397,6 +408,8 @@ async function updateFeature(id) {
     notes: props.notes || null,
     kids_friendly: !!props.kids_friendly,
     acces_pieton: !!props.acces_pieton,
+    besoin_echelle: !!props.besoin_echelle,
+    besoin_caisses: !!props.besoin_caisses,
     jour: props.jour || null,
     ramassage: props.ramassage || null,
   }).eq('id', id);
