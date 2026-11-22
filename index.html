@@ -941,8 +941,11 @@
         pl.innerHTML = '<div class="hint">Ton compte n\'est pas dans la liste des administrateurs. Demande \u00e0 un admin existant de l\'ajouter.</div>';
         return;
       }
-      const { data: pend } = await sb.from('arbres').select('*').eq('statut', 'attente').order('cree_le');
-      if (!pend || !pend.length) {
+      const { data: pend, error: pErr } = await sb.from('arbres').select('*').eq('statut', 'attente').order('cree_le');
+      if (pErr) {
+        pl.innerHTML = '<div class="hint">\u26a0\ufe0f Erreur de lecture des demandes : ' + pErr.message + '</div>';
+        toast('\u26a0\ufe0f ' + pErr.message, false);
+      } else if (!pend || !pend.length) {
         pl.innerHTML = '<div class="hint">Aucune demande en attente \u{1F389}</div>';
       } else {
         pend.forEach((t) => {
@@ -973,8 +976,10 @@
           pl.appendChild(card);
         });
       }
-      const { data: adms } = await sb.from('admins').select('email').order('email');
-      if (!adms || !adms.length) {
+      const { data: adms, error: aErr } = await sb.from('admins').select('email').order('email');
+      if (aErr) {
+        al.innerHTML = '<div class="hint">\u26a0\ufe0f Erreur de lecture des admins : ' + aErr.message + '</div>';
+      } else if (!adms || !adms.length) {
         al.innerHTML = '<div class="hint">Aucun admin en base (ajoute-toi via SQL le premier).</div>';
       } else {
         adms.forEach((a) => al.appendChild(adminsRow(a.email, a.email !== currentEmail)));
