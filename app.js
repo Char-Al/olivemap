@@ -93,6 +93,10 @@ function popupHtml(props) {
     const past = d < new Date();
     rows.push([past ? 'Ramassé' : 'Ramassage', `${past ? '✅' : '🚚'} ${d.toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`]);
   }
+  if (props.jour) rows.push([
+    'Jour',
+    props.jour === 1 ? '🟠 Jour 1' : '🔵 Jour 2',
+  ]);
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
@@ -205,7 +209,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -282,7 +286,7 @@ addBadge.addEventListener('click', () => toggleAdd(false));
 function setFormMode(target) {
   document.getElementById('modal-title').textContent = target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre';
   document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : 'Envoyer la proposition';
-  document.getElementById('ramassage-row').style.display = target === 'propose' ? 'none' : '';
+  document.getElementById('admin-fields').style.display = target === 'propose' ? 'none' : '';
   const pb = document.getElementById('btn-photo');
   pb.textContent = '📷 Prendre / choisir une photo';
   pb.disabled = false;
@@ -314,6 +318,10 @@ function collectFormValues() {
   if (val('f-notes')) props.notes = val('f-notes');
   if (document.getElementById('f-kids').checked) props.kids_friendly = true;
   if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
+  if (addModeTarget !== 'propose') {
+    const j = parseInt(document.getElementById('f-jour').value, 10);
+    if (j === 1 || j === 2) props.jour = j;
+  }
   if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
   return props;
 }
@@ -340,6 +348,7 @@ function fillForm(props) {
   document.getElementById('f-notes').value = props.notes || '';
   document.getElementById('f-kids').checked = !!props.kids_friendly;
   document.getElementById('f-pieton').checked = !!props.acces_pieton;
+  document.getElementById('f-jour').value = props.jour ? String(props.jour) : '';
   document.getElementById('f-ramassage').value = props.ramassage ? localDT(props.ramassage) : '';
 }
 
@@ -372,6 +381,7 @@ async function updateFeature(id) {
     notes: props.notes || null,
     kids_friendly: !!props.kids_friendly,
     acces_pieton: !!props.acces_pieton,
+    jour: props.jour || null,
     ramassage: props.ramassage || null,
   }).eq('id', id);
   editTreeId = null;
