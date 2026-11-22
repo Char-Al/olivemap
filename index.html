@@ -55,7 +55,7 @@
       pointer-events: auto;
       display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto;
     }
-    select.search, .btn {
+    .btn {
       background: var(--panel); color: var(--text);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -63,11 +63,6 @@
       box-shadow: 0 4px 16px rgba(0,0,0,.35);
       outline: none;
     }
-    .search {
-      min-width: 170px;
-      background: var(--panel);
-    }
-    .search:focus { border-color: var(--accent); }
     .btn {
       cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
       transition: background .15s, border-color .15s, transform .1s;
@@ -157,6 +152,8 @@
       display: inline-block; width: 10px; height: 10px;
       border-radius: 50%; margin-right: 6px; vertical-align: middle;
     }
+    .legend-toggle { cursor: pointer; user-select: none; transition: opacity .15s; }
+    .legend-toggle:not(.active) { opacity: .35; text-decoration: line-through; }
 
     /* ---- Modale création ---- */
     .modal-overlay {
@@ -325,7 +322,6 @@
 
     @media (max-width: 600px) {
       .brand span.title { font-size: 14px; }
-      .search { min-width: 0; flex: 1; }
       .topbar { left: 8px; right: 8px; }
       .legend { right: 8px; bottom: 84px; font-size: 11px; padding: 8px 10px; }
     }
@@ -338,15 +334,6 @@
   <div class="topbar">
     <div class="brand"><span class="dot">●</span><span class="title">Olivemap</span></div>
     <div class="controls">
-      <input type="text" id="search" class="search" placeholder="Rechercher…" autocomplete="off" />
-      <select id="filter-species" class="search">
-        <option value="">Toutes les espèces</option>
-      </select>
-      <select id="filter-owner" class="search">
-        <option value="">Mairie + particuliers</option>
-        <option value="Mairie">Mairie</option>
-        <option value="Particulier">Particuliers</option>
-      </select>
       <button id="btn-filter-open" class="btn" title="Afficher uniquement les arbres dont le ramassage est prévu (ou jamais réalisé)">🚚 À ramasser</button>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-install" class="btn" title="Installer Olivemap sur ton appareil" style="display:none">📲 Installer</button>
@@ -356,8 +343,8 @@
   </div>
 
   <div class="legend">
-    <div><span class="swatch" style="background:#7fb069"></span>Particulier</div>
-    <div><span class="swatch" style="background:#4a8fc7"></span>Mairie</div>
+    <div id="legend-particulier" class="legend-toggle active" title="Afficher / masquer les arbres de particuliers"><span class="swatch" style="background:#7fb069"></span>Particulier</div>
+    <div id="legend-mairie" class="legend-toggle active" title="Afficher / masquer les arbres de la mairie"><span class="swatch" style="background:#4a8fc7"></span>Mairie</div>
     <div id="legend-pending" style="display:none;align-items:center;gap:6px"><svg width="14" height="18" viewBox="0 0 34 46"><path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="#9a8f6a" stroke-width="2" stroke-dasharray="4 3"/></svg> en attente (admins)</div>
   </div>
   <div class="counter" id="counter"></div>
@@ -585,22 +572,17 @@
     }
 
     function visibleFeatures() {
-      const q = document.getElementById('search').value.trim().toLowerCase();
-      const sp = document.getElementById('filter-species').value;
-      const ow = document.getElementById('filter-owner').value;
+      const showM = document.getElementById('legend-mairie').classList.contains('active');
+      const showP = document.getElementById('legend-particulier').classList.contains('active');
       const op = document.getElementById('btn-filter-open').classList.contains('active');
       const now = new Date();
       return allFeatures.filter((f) => {
         const p = f.properties || {};
-        if (sp && (p.espece || '') !== sp) return false;
-        if (ow && (OWNER_LABELS[p.type] || p.type || '') !== ow) return false;
+        if (p.type === 'mairie' && !showM) return false;
+        if (p.type === 'particulier' && !showP) return false;
         if (op) {
           if (p.statut === 'attente') return false;
           if (p.ramassage && new Date(p.ramassage) < now) return false;
-        }
-        if (q) {
-          const blob = Object.values(p).join(' ').toLowerCase();
-          if (!blob.includes(q)) return false;
         }
         return true;
       });
@@ -712,14 +694,6 @@
 
       allFeatures = features;
 
-      const species = [...new Set(allFeatures.map((f) => (f.properties || {}).espece).filter(Boolean))].sort();
-      const sel = document.getElementById('filter-species');
-      species.forEach((s) => {
-        const opt = document.createElement('option');
-        opt.value = s; opt.textContent = s;
-        sel.appendChild(opt);
-      });
-
       if (allFeatures.length === 1) {
         map.setView([allFeatures[0].geometry.coordinates[1], allFeatures[0].geometry.coordinates[0]], 16);
       } else if (allFeatures.length > 1) {
@@ -729,9 +703,14 @@
       render();
     }
 
-    document.getElementById('search').addEventListener('input', render);
-    document.getElementById('filter-species').addEventListener('change', render);
-    document.getElementById('filter-owner').addEventListener('change', render);
+    document.getElementById('legend-particulier').addEventListener('click', () => {
+      document.getElementById('legend-particulier').classList.toggle('active');
+      render();
+    });
+    document.getElementById('legend-mairie').addEventListener('click', () => {
+      document.getElementById('legend-mairie').classList.toggle('active');
+      render();
+    });
     document.getElementById('btn-filter-open').addEventListener('click', () => {
       document.getElementById('btn-filter-open').classList.toggle('active');
       render();

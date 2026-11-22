@@ -5,7 +5,7 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 - Carte OpenStreetMap avec marqueurs cliquables (popup : propriétaire, rendement, espèce, hauteur, circonférence, année de plantation, état, notes, photo…)
 - **2 couleurs de points** : vert = arbre d'un particulier, bleu = arbre de la mairie
 - **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et le marqueur affiche **1, 2 ou 3 olives 🫒** selon le rendement, visible d'un coup d'œil sur la carte
-- Recherche plein texte + filtres par espèce et par propriétaire
+- **Filtres cliquables dans la légende** : un clic sur « Particulier » ou « Mairie » masque/affiche chaque type de point (les deux actifs par défaut), et le bouton 🚚 « À ramasser » isole les ramassages à venir
 - **Proposition d'un arbre par n'importe quel visiteur** (bouton 🙋) : le point part dans la base Supabase et attend la validation d'un admin
 - Bouton de géolocalisation
 - Responsive, fonctionne sur mobile
@@ -38,7 +38,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v5`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v6`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
