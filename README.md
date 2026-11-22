@@ -14,6 +14,19 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 
 Les 10 oliviers d'exemple sont placés à **Claret (34270)** autour du village.
 
+## ➕ Créer un arbre directement depuis le site
+
+1. Bouton **« ＋ Point »** → clic à l'endroit voulu sur la carte → un formulaire s'ouvre (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes)
+2. **« Créer l'arbre »** → l'arbre est ajouté au dépôt par une demande signée au nom de ton compte GitHub (un commit apparaît dans l'historique) et le site se met à jour au prochain déploiement (~1 min)
+
+Au premier usage, le site demande un **jeton GitHub** (bouton 🔑 pour y revenir) :
+
+- crée-le sur [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) (Fine-grained)
+- **Repository access** : *Only select repositories* → `olivemap`
+- **Permissions** : Contents → *Read and write*
+
+Le jeton est stocké **uniquement dans ce navigateur** (localStorage) et ne part que vers l'API GitHub. Bouton **Supprimer** dans le panneau 🔑 pour l'effacer. Sans jeton, le bouton « Copier le JSON » du formulaire reste disponible pour l'ajout manuel.
+
 ## 🚀 Activer le site
 
 1. Dans ce dépôt : **Settings → Pages**
