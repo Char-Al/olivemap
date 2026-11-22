@@ -175,3 +175,35 @@ create policy "photos upload admin"
   on storage.objects for insert
   to authenticated
   with check (bucket_id = 'photos' and public.is_admin());
+
+-- ============================================================
+-- 10) CUEILLETTE EN 2 JOURS : jour par arbre + matériel + annonce
+--     (ré-exécutable : idempotent)
+-- ============================================================
+alter table public.arbres
+  add column if not exists jour smallint,
+  add column if not exists besoin_echelle boolean,
+  add column if not exists besoin_caisses boolean;
+
+create table if not exists public.infos (
+  id uuid primary key default gen_random_uuid(),
+  cle text unique not null,
+  valeur text not null,
+  maj_le timestamptz default now()
+);
+alter table public.infos enable row level security;
+
+drop policy if exists "lecture publique des infos" on public.infos;
+drop policy if exists "admins modifient les infos" on public.infos;
+
+create policy "lecture publique des infos"
+  on public.infos for select
+  using (true);
+
+create policy "admins modifient les infos"
+  on public.infos for all
+  using (public.is_admin()) with check (public.is_admin());
+
+grant select on public.infos to anon, authenticated;
+
+alter table public.participations add column if not exists apporte text;
