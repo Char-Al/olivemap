@@ -1080,9 +1080,9 @@
         if (error) throw error;
         const { data: pub } = sb.storage.from('photos').getPublicUrl(path);
         document.getElementById('f-photo').value = pub.publicUrl;
-        btn.textContent = '\U0001F4F7 Photo \u2713';
+        btn.textContent = '\u{0001F4F7} Photo \u2713';
       } catch (err) {
-        btn.textContent = '\U0001F4F7 Prendre / choisir une photo';
+        btn.textContent = '\u{0001F4F7} Prendre / choisir une photo';
         btn.disabled = false;
         phErr.textContent = 'Envoi de la photo impossible : ' + (err.message || err);
         phErr.classList.add('visible');
@@ -1167,12 +1167,12 @@
       const list = (data || []).map((r) => `\u00b7 <b>${esc(r.pseudo)}</b> (${r.nb_personnes})`).join(' ');
       const me = localStorage.getItem('olivemap_pseudo') || '';
       zone.innerHTML = `
-        <div class="part-head">\U0001F465 ${total} participant${total > 1 ? 's' : ''}</div>
+        <div class="part-head">\u{0001F465} ${total} participant${total > 1 ? 's' : ''}</div>
         ${list ? `<div class="part-list">${list}</div>` : ''}
         <div class="part-form">
           <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
           <input data-part-nb type="number" min="1" max="50" value="1" />
-          <button type="button" class="mini ok" data-part-go>\U0001F64B Je viens</button>
+          <button type="button" class="mini ok" data-part-go>\u{0001F64B} Je viens</button>
         </div>`;
       const go = zone.querySelector('[data-part-go]');
       go.addEventListener('click', async () => {
@@ -1182,7 +1182,7 @@
         const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb });
         if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
         localStorage.setItem('olivemap_pseudo', pseudo);
-        toast(`\U0001F64B ${pseudo} \u00b7 ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
+        toast(`\u{0001F64B} ${pseudo} \u00b7 ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
         loadParticipations(id, zone);
       });
     }
@@ -1249,7 +1249,7 @@
             <td>${esc(t.espece || '\u2014')}</td>
             <td>${t.ramassage ? localDT(t.ramassage).replace('T', ' ') : '\u2014'}</td>
             <td>${t.statut === 'valide' ? '\u2705' : '\u23f3'}</td>
-            <td><button type="button" class="mini edit" data-td="toggle">${t.statut === 'valide' ? '\u23f3 D\u00e9valider' : '\u2705 Valider'}</button> <button type="button" class="mini no" data-td="del">\U0001F5D1</button></td>
+            <td><button type="button" class="mini edit" data-td="toggle">${t.statut === 'valide' ? '\u23f3 D\u00e9valider' : '\u2705 Valider'}</button> <button type="button" class="mini no" data-td="del">\u{0001F5D1}</button></td>
           </tr>`).join('') + '</tbody>';
         at.innerHTML = '';
         at.appendChild(tbl);
@@ -1268,7 +1268,7 @@
             if (!confirm(`Supprimer \u00ab ${row.nom} \u00bb ?`)) return;
             const { error } = await sb.from('arbres').delete().eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-            toast(`\U0001F5D1 \u00ab ${row.nom} \u00bb supprim\u00e9.`);
+            toast(`\u{0001F5D1} \u00ab ${row.nom} \u00bb supprim\u00e9.`);
             loadAdminPanel();
             load();
           });
