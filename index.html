@@ -417,15 +417,20 @@
 
       <div class="step" id="step-login">
         <h2>👑 Espace admin</h2>
-        <p class="hint">Connecte-toi avec un compte dont l'email figure dans la liste des administrateurs.</p>
+        <p class="hint">Connexion sans mot de passe : entre ton email, tu recevras un code à 6 chiffres. Il doit figurer dans la liste des administrateurs.</p>
         <label>Email</label>
         <input id="a-email" type="email" placeholder="prenom@exemple.fr" autocomplete="username" />
-        <label>Mot de passe</label>
-        <input id="a-pass" type="password" placeholder="Mot de passe" autocomplete="current-password" />
         <div class="err" id="login-err"></div>
         <div class="modal-actions">
-          <button type="button" class="ghost" id="btn-signup">Créer le compte</button>
-          <button type="button" class="primary" id="btn-signin">Se connecter</button>
+          <button type="button" class="primary" id="btn-code">Recevoir un code</button>
+        </div>
+        <div id="code-row" style="display:none">
+          <label>Code reçu par email</label>
+          <input id="a-code" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code" />
+          <div class="modal-actions">
+            <button type="button" class="ghost" id="btn-code-again">Renvoyer</button>
+            <button type="button" class="primary" id="btn-verify">Se connecter</button>
+          </div>
         </div>
       </div>
 
@@ -988,11 +993,49 @@
       return message;
     }
 
-    function readLogin() {
-      return {
-        email: document.getElementById('a-email').value.trim(),
-        password: document.getElementById('a-pass').value,
-      };
+    let otpEmail = null;
+
+    async function sendCode() {
+      const err = document.getElementById('login-err');
+      const email = document.getElementById('a-email').value.trim();
+      if (!email || !email.includes('@')) {
+        err.textContent = 'Entre un email valide.';
+        err.classList.add('visible');
+        return;
+      }
+      err.classList.remove('visible');
+      const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+      if (error) {
+        err.textContent = /not allowed|not found|signups|disabled/i.test(error.message)
+          ? 'Aucun compte existant pour cet email. Demande à un administrateur de te créer un accès.'
+          : 'Envoi impossible : ' + error.message;
+        err.classList.add('visible');
+        return;
+      }
+      otpEmail = email;
+      document.getElementById('code-row').style.display = '';
+      document.getElementById('btn-code').textContent = 'Code envoyé ✓';
+      document.getElementById('a-code').focus();
+    }
+
+    async function verifyCode() {
+      if (!otpEmail) return;
+      const err = document.getElementById('login-err');
+      const token = document.getElementById('a-code').value.trim();
+      if (!token) return;
+      const { error } = await sb.auth.verifyOTP({ email: otpEmail, token, type: 'email' });
+      if (error) {
+        err.textContent = /invalid|expired/i.test(error.message)
+          ? 'Code invalide ou expiré — renvoie-en un.'
+          : authErr(error.message);
+        err.classList.add('visible');
+        return;
+      }
+      err.classList.remove('visible');
+      otpEmail = null;
+      await refreshAdminState();
+      showStep('admin');
+      loadAdminPanel();
     }
 
     document.getElementById('btn-admin').addEventListener('click', async () => {
@@ -1002,26 +1045,23 @@
       else { showStep('login'); }
     });
 
-    document.getElementById('btn-signin').addEventListener('click', async () => {
-      const err = document.getElementById('login-err');
-      const creds = readLogin();
-      const { error } = await sb.auth.signInWithPassword(creds);
-      if (error) { err.textContent = authErr(error.message); err.classList.add('visible'); return; }
-      err.classList.remove('visible');
-      await refreshAdminState();
-      showStep('admin');
-      loadAdminPanel();
+    document.getElementById('btn-code').addEventListener('click', sendCode);
+
+    document.getElementById('btn-verify').addEventListener('click', verifyCode);
+
+    document.getElementById('a-email').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendCode();
     });
 
-    document.getElementById('btn-signup').addEventListener('click', async () => {
-      const err = document.getElementById('login-err');
-      const creds = readLogin();
-      const { data, error } = await sb.auth.signUp(creds);
-      if (error) { err.textContent = authErr(error.message); err.classList.add('visible'); return; }
-      err.classList.remove('visible');
-      toast(data && data.session
-        ? "\u2705 Compte cr\u00e9\u00e9 et connect\u00e9. Un admin existant doit encore l'ajouter \u00e0 la liste pour donner les droits."
-        : "\u{1F4E8} Compte cr\u00e9\u00e9 \u2014 confirme ton email, puis connecte-toi. Un admin devra ensuite l'ajouter \u00e0 la liste.", false);
+    document.getElementById('a-code').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verifyCode();
+    });
+
+    document.getElementById('btn-code-again').addEventListener('click', async () => {
+      document.getElementById('code-row').style.display = 'none';
+      document.getElementById('btn-code').textContent = 'Recevoir un code';
+      otpEmail = null;
+      await sendCode();
     });
 
     document.getElementById('btn-add-admin').addEventListener('click', async () => {
