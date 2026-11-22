@@ -205,5 +205,6 @@ create policy "admins modifient les infos"
   using (public.is_admin()) with check (public.is_admin());
 
 grant select on public.infos to anon, authenticated;
+grant insert, update, delete on public.infos to authenticated;
 
 alter table public.participations add column if not exists apporte text;
