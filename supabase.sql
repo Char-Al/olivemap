@@ -183,7 +183,8 @@ create policy "photos upload admin"
 alter table public.arbres
   add column if not exists jour smallint,
   add column if not exists besoin_echelle boolean,
-  add column if not exists besoin_caisses boolean;
+  add column if not exists besoin_caisses boolean,
+  add column if not exists besoin_rateau boolean;
 
 create table if not exists public.infos (
   id uuid primary key default gen_random_uuid(),

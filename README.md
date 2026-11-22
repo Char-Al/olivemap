@@ -40,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v13`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v14`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -123,7 +123,7 @@ La récolte s'organise sur **deux journées** ; chaque arbre est rattaché (ou n
 - **Jour par arbre** : les admins choisissent dans la popup ✏️ Modifier → *Jour de cueillette* (`Jour 1` 🟠, `Jour 2` 🔵 ou *peu importe*). Le jour s'affiche dans le popup.
 - **Filtres Jour 1 / Jour 2** : boutons 🟠/🔵 en haut de la carte pour ne montrer que les arbres d'un jour (un seul actif à la fois, aucun = tout afficher).
 - **Annonce** : les admins écrivent le rendez-vous / consignes dans le panneau admin (*Annonce*, 📢 Enregistrer) → bandeau visible par tous. Fermetable ; le message reste caché jusqu'à sa prochaine modification.
-- **Matériel par arbre** : les cochent 🪜 Échelle / 🧺 Caisses nécessaires dans la fenêtre admin d'un arbre → affichés dans le popup.
+- **Matériel par arbre** : les cochent 🪜 Échelle / 🧺 Caisses / 🍂 Râteau nécessaires dans la fenêtre admin d'un arbre → affichés dans le popup.
 - **J'apporte** : dans *Je viens*, le volontaire précise ce qu'il apporte (échelle, caisses, les deux) ; visible dans la liste des participants (suppression par les admins).
 - **Partage** : bouton 🔗 Partager l'arbre dans le popup → lien direct `?arbre=<id>` qui ouvre la carte centrée sur l'arbre ; bouton 🧭 Itinéraire → navigation Google Maps.
 

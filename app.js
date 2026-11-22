@@ -106,12 +106,13 @@ function popupHtml(props, coords) {
   const mat = [
     props.besoin_echelle ? '🪜 Échelle' : null,
     props.besoin_caisses ? '🧺 Caisses' : null,
+    props.besoin_rateau ? '🍂 Râteau' : null,
   ].filter(Boolean);
   if (mat.length) rows.push(['Matériel', mat.join(' · ')]);
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
-    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses'].includes(k) && v != null && v !== '') {
+    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau'].includes(k) && v != null && v !== '') {
       rows.push([esc(k), esc(String(v))]);
     }
   }
@@ -232,7 +233,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -356,6 +357,7 @@ function collectFormValues() {
   if (addModeTarget !== 'propose') {
     props.besoin_echelle = document.getElementById('f-echelle').checked;
     props.besoin_caisses = document.getElementById('f-caisses').checked;
+    props.besoin_rateau = document.getElementById('f-rateau').checked;
   }
   if (addModeTarget !== 'propose') {
     const j = parseInt(document.getElementById('f-jour').value, 10);
@@ -389,6 +391,7 @@ function fillForm(props) {
   document.getElementById('f-pieton').checked = !!props.acces_pieton;
   document.getElementById('f-echelle').checked = !!props.besoin_echelle;
   document.getElementById('f-caisses').checked = !!props.besoin_caisses;
+  document.getElementById('f-rateau').checked = !!props.besoin_rateau;
   document.getElementById('f-jour').value = props.jour ? String(props.jour) : '';
   document.getElementById('f-ramassage').value = props.ramassage ? localDT(props.ramassage) : '';
 }
@@ -424,6 +427,7 @@ async function updateFeature(id) {
     acces_pieton: !!props.acces_pieton,
     besoin_echelle: !!props.besoin_echelle,
     besoin_caisses: !!props.besoin_caisses,
+    besoin_rateau: !!props.besoin_rateau,
     jour: props.jour || null,
     ramassage: props.ramassage || null,
   }).eq('id', id);
@@ -613,7 +617,7 @@ function adminsRow(email, removable) {
 }
 
 const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', deux: '🪜🧺 les deux' };
+const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🍂 râteau', deux: '🪜🧺 les deux' };
 
 async function loadParticipations(id, zone, quand) {
   if (!sb) return;
@@ -638,6 +642,7 @@ async function loadParticipations(id, zone, quand) {
         <option value="">de rien</option>
         <option value="echelle">🪜 échelle</option>
         <option value="caisses">🧺 caisses</option>
+        <option value="rateau">🍂 râteau</option>
         <option value="deux">🪜🧺 les deux</option>
       </select>
       <input data-part-nb type="number" min="1" max="50" value="1" />
