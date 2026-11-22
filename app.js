@@ -122,7 +122,7 @@ function popupHtml(props, coords) {
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
     ${props.notes ? `<div class="notes">${esc(props.notes)}</div>` : ''}
-    ${props.id && props.statut !== 'attente' && props.ramassage && new Date(props.ramassage) >= new Date() ? '<div class="part-zone" data-part></div>' : ''}
+    ${props.id && props.statut !== 'attente' && (props.jour === 1 || props.jour === 2 || (props.ramassage && new Date(props.ramassage) >= new Date())) ? '<div class="part-zone" data-part></div>' : ''}
     ${actPending ? `
       <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
       <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
