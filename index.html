@@ -204,6 +204,13 @@
     .modal-actions .ghost:hover { color: var(--text); border-color: var(--accent); }
     .modal .step { display: none; }
     .modal .step.visible { display: block; }
+    .check-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 12px; font-size: 13px; color: var(--text);
+      cursor: pointer;
+    }
+    .check-row input { width: auto; margin: 0; accent-color: var(--accent-strong); cursor: pointer; }
+    .check-row span { user-select: none; }
     .modal .err { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
     .modal .err.visible { display: block; }
     .modal .hint { font-size: 12px; color: var(--text-dim); line-height: 1.55; margin: 8px 0; }
@@ -345,6 +352,8 @@
           <input id="f-photo" type="url" placeholder="https://…/photo.jpg" />
           <label>Notes</label>
           <textarea id="f-notes" rows="2"></textarea>
+          <div class="check-row"><input type="checkbox" id="f-kids" /><span>👶 Adapté aux enfants</span></div>
+          <div class="check-row"><input type="checkbox" id="f-pieton" /><span>🚶 Accès piéton uniquement</span></div>
           <div class="err" id="form-err"></div>
           <div class="modal-actions">
             <button type="button" class="ghost" id="btn-copy-json">Copier le JSON</button>
@@ -458,8 +467,10 @@
         const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || props.etat}</span>`]);
       }
+      if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
+      if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
       for (const [k, v] of Object.entries(props)) {
-        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production'].includes(k) && v != null && v !== '') {
+        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton'].includes(k) && v != null && v !== '') {
           rows.push([k, String(v)]);
         }
       }
@@ -609,6 +620,8 @@
       const a = num(val('f-annee')); if (a !== undefined) props.annee_plantation = a;
       if (val('f-photo')) props.photo = val('f-photo');
       if (val('f-notes')) props.notes = val('f-notes');
+      if (document.getElementById('f-kids').checked) props.kids_friendly = true;
+      if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
       return props;
     }
 
@@ -691,6 +704,8 @@
         annee_plantation: p.annee_plantation || null,
         photo: p.photo || null,
         notes: p.notes || null,
+        kids_friendly: !!p.kids_friendly,
+        acces_pieton: !!p.acces_pieton,
         lng,
         lat,
         statut: 'attente',

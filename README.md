@@ -21,7 +21,7 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 **Mise en place (une fois, ~2 min) :**
 
 1. Crée un projet gratuit sur [supabase.com](https://supabase.com)
-2. Ouvre le **SQL Editor** du projet et exécute le script [`supabase.sql`](supabase.sql) (table + règles de sécurité RLS : lecture publique des arbres `valide`, insertion publique seulement en `attente`)
+2. Ouvre le **SQL Editor** du projet et exécute le script [`supabase.sql`](supabase.sql) (table + règles de sécurité RLS : lecture publique des arbres `valide`, insertion publique seulement en `attente`) — le script est idempotent : le ré-exécuter applique les mises à jour de schéma (p. ex. nouvelles colonnes `kids_friendly`, `acces_pieton`)
 3. C'est tout — l'URL du projet et la clé *publishable* `sb_publishable_…` (publique par conception) sont déjà dans `index.html`
 
 **Valider une proposition :** Table Editor → table `arbres` → ligne en `attente` → changer `statut` en `valide`. La carte se met à jour au chargement suivant. Les données du GeoJSON et de Supabase sont **fusionnées** à l'affichage.
@@ -77,6 +77,8 @@ Les données vivent dans [`arbres.geojson`](arbres.geojson) : une entrée = un a
 - `type` : `particulier` (point **vert**) ou `mairie` (point **bleu**)
 - `production` : échelle de **1 à 3** affichée en ●●○, et le marqueur arbore **1, 2 ou 3 olives 🫒** en conséquence
 - Tous les champs sauf `nom` sont optionnels ; ajoute tes propres clés, elles apparaîtront dans le popup
+- `kids_friendly` : `true` si l'arbre est adapté aux enfants (affiché 👶 dans le popup)
+- `acces_pieton` : `true` si l'accès est piéton uniquement (affiché 🚶 dans le popup)
 - Sur la carte, le bouton **« ＋ Point »** copie un bloc déjà rempli avec `type` et `production`
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
 - Pour une photo : héberge-la (p. ex. dans un dossier `photos/` du dépôt) et mets son URL

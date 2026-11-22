@@ -14,10 +14,16 @@ create table if not exists public.arbres (
   etat text,
   photo text,
   notes text,
+  kids_friendly boolean not null default false,
+  acces_pieton boolean not null default false,
   lng double precision not null,
   lat double precision not null,
   statut text not null default 'attente' check (statut in ('attente','valide','rejete'))
 );
+
+alter table public.arbres
+  add column if not exists kids_friendly boolean not null default false,
+  add column if not exists acces_pieton boolean not null default false;
 
 alter table public.arbres enable row level security;
 
