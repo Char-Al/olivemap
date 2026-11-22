@@ -321,6 +321,7 @@
         <option value="Mairie">Mairie</option>
         <option value="Particulier">Particuliers</option>
       </select>
+      <button id="btn-filter-open" class="btn" title="Afficher uniquement les arbres dont le ramassage est prévu (ou jamais réalisé)">🚚 À ramasser</button>
       <button id="btn-add" class="btn" title="Ajouter un arbre">＋ Point</button>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-key" class="btn" title="Jeton GitHub (pour créer des arbres)">🔑</button>
@@ -579,10 +580,16 @@
       const q = document.getElementById('search').value.trim().toLowerCase();
       const sp = document.getElementById('filter-species').value;
       const ow = document.getElementById('filter-owner').value;
+      const op = document.getElementById('btn-filter-open').classList.contains('active');
+      const now = new Date();
       return allFeatures.filter((f) => {
         const p = f.properties || {};
         if (sp && (p.espece || '') !== sp) return false;
         if (ow && (OWNER_LABELS[p.type] || p.type || '') !== ow) return false;
+        if (op) {
+          if (p.statut === 'attente') return false;
+          if (p.ramassage && new Date(p.ramassage) < now) return false;
+        }
         if (q) {
           const blob = Object.values(p).join(' ').toLowerCase();
           if (!blob.includes(q)) return false;
@@ -709,6 +716,10 @@
     document.getElementById('search').addEventListener('input', render);
     document.getElementById('filter-species').addEventListener('change', render);
     document.getElementById('filter-owner').addEventListener('change', render);
+    document.getElementById('btn-filter-open').addEventListener('click', () => {
+      document.getElementById('btn-filter-open').classList.toggle('active');
+      render();
+    });
 
     document.getElementById('btn-locate').addEventListener('click', () => {
       map.locate({ setView: true, maxZoom: 16 });
