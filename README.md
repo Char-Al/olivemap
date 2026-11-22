@@ -22,7 +22,7 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 1. Crée un projet gratuit sur [supabase.com](https://supabase.com)
 2. Ouvre le **SQL Editor** du projet et exécute le script [`supabase.sql`](supabase.sql) (table + règles de sécurité RLS : lecture publique des arbres `valide`, insertion publique seulement en `attente`)
-3. C'est tout — l'URL du projet et la clé `anon` (publique par conception) sont déjà dans `index.html`
+3. C'est tout — l'URL du projet et la clé *publishable* `sb_publishable_…` (publique par conception) sont déjà dans `index.html`
 
 **Valider une proposition :** Table Editor → table `arbres` → ligne en `attente` → changer `statut` en `valide`. La carte se met à jour au chargement suivant. Les données du GeoJSON et de Supabase sont **fusionnées** à l'affichage.
 

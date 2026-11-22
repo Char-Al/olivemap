@@ -384,10 +384,10 @@
     const DATA_PATH = 'arbres.geojson';
     const TOKEN_KEY = 'olivemap_token';
     const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YmJ3c3ZndnRtenJxbmtkaHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNTA3OTYsImV4cCI6MjExMDkyNjc5Nn0.bJSE4Q5UDnyHQfr_BfWGNy1Tl1BPvL_C58q9AfdOylo';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_kYKGqGknRPqJyJemHVVNLw_jYRT_N4R';
     let sb = null;
     try {
-      if (typeof supabase !== 'undefined') sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      if (typeof supabase !== 'undefined') sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     } catch (e) { sb = null; }
 
     const map = L.map('map', { zoomControl: false }).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
