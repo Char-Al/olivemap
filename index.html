@@ -570,7 +570,7 @@
         ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
         ${actPending ? `
           <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
-          <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\U0001F5D1 Rejeter</button></div>` : ''}
+          <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
         ${adminRow}
       </div>`;
     }
@@ -614,7 +614,7 @@
               } else {
                 const { error } = await sb.from('arbres').delete().eq('id', id);
                 if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-                toast(`\U0001F5D1 Proposition \u00ab ${f.properties.nom} \u00bb rejet\u00e9e.`);
+                toast(`\u{1F5D1} Proposition \u00ab ${f.properties.nom} \u00bb rejet\u00e9e.`);
               }
               marker.closePopup();
               if (typeof loadAdminPanel === 'function' && isAdminUser) loadAdminPanel();
