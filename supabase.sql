@@ -113,3 +113,34 @@ create policy "un admin retire un autre admin"
 -- Vérification : doit lister les policies en place
 select tablename, policyname, cmd from pg_policies
   where schemaname = 'public' and tablename in ('arbres', 'admins');
+
+-- ============================================================
+-- 8) PARTICIPATIONS AUX CUEILLETTES (« Je viens »)
+-- ============================================================
+create table if not exists public.participations (
+  id bigint generated always as identity primary key,
+  arbre_id bigint not null references public.arbres (id) on delete cascade,
+  pseudo text not null,
+  nb_personnes int not null default 1 check (nb_personnes between 1 and 50),
+  cree_le timestamptz not null default now()
+);
+alter table public.participations enable row level security;
+
+drop policy if exists "lecture publique des participations" on public.participations;
+create policy "lecture publique des participations"
+  on public.participations for select
+  using (true);
+
+drop policy if exists "n'importe qui peut participer" on public.participations;
+create policy "n'importe qui peut participer"
+  on public.participations for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "les admins gerent les participations" on public.participations;
+create policy "les admins gerent les participations"
+  on public.participations for delete
+  using (public.is_admin());
+
+grant select, insert on public.participations to anon, authenticated;
+grant delete on public.participations to authenticated;

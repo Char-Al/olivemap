@@ -26,6 +26,8 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 **⏱ Date de ramassage** : réservée aux **administrateurs** — le champ est masqué dans le formulaire public et la base refuse toute insertion publique avec une date (RLS). Un admin peut la définir **au moment de la validation**.
 
+**🙋 Participations** : dans la popup de tout arbre validé, n'importe qui peut s'inscrire (« 🙋 Je viens ») avec son pseudo et un nombre de personnes. Le total et la liste apparaissent dans la popup. Nécessite la section 8 de `supabase.sql`.
+
 **👑 Panneau admin (bouton 👑 du site)**
 
 - Connexion par **identifiant (pseudo) + mot de passe** — pas d'email affiché. Le pseudo est mappé en interne vers le compte système Supabase `pseudo@olivemap.claret`. Le mot de passe n'est jamais stocké en clair (bcrypt + sel, côté Supabase).

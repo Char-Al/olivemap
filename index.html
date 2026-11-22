@@ -236,6 +236,12 @@
     .mini.ok { background: var(--accent-strong); color: #fff; }
     .mini.ok:hover { filter: brightness(1.15); }
     .mini.no { background: #5a3a34; color: #f7c5c0; }
+    .part-zone { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 8px; }
+    .part-zone .part-head { font-size: 13px; font-weight: 700; }
+    .part-zone .part-list { font-size: 12px; color: var(--text-dim); margin: 4px 0 2px; }
+    .part-zone .part-form { display: flex; gap: 6px; margin-top: 6px; }
+    .part-zone .part-form input { flex: 1; min-width: 0; }
+    .part-zone .part-form input[data-part-nb] { flex: 0 0 52px; }
     .mini.edit { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .mini.edit:hover { border-color: var(--accent); color: var(--accent); }
     .admin-row {
@@ -569,6 +575,7 @@
         ${props.photo ? `<img src="${props.photo}" alt="${props.nom || ''}" onerror="this.style.display='none'"/>` : ''}
         ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
         ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
+        ${props.id && props.statut !== 'attente' ? '<div class="part-zone" data-part></div>' : ''}
         ${actPending ? `
           <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
           <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
@@ -649,6 +656,8 @@
               toast(`🗑 « ${f.properties.nom} » supprimé.`);
               await load();
             });
+            const pz = el.querySelector('[data-part]');
+            if (pz) loadParticipations(f.properties.id, pz);
           });
         }
         marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${f.properties.nom || 'Arbre'} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
@@ -1075,6 +1084,37 @@
         });
       }
       return row;
+    }
+
+    const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+
+    async function loadParticipations(id, zone) {
+      if (!sb) return;
+      zone.innerHTML = '<div class="hint">\u23f3 Chargement\u2026</div>';
+      const { data, error } = await sb.from('participations').select('pseudo, nb_personnes').eq('arbre_id', id).order('cree_le');
+      if (error) { zone.innerHTML = '<div class="hint">\u26a0\ufe0f ' + error.message + '</div>'; return; }
+      const total = (data || []).reduce((a, r) => a + (r.nb_personnes || 1), 0);
+      const list = (data || []).map((r) => `\u00b7 <b>${esc(r.pseudo)}</b> (${r.nb_personnes})`).join(' ');
+      const me = localStorage.getItem('olivemap_pseudo') || '';
+      zone.innerHTML = `
+        <div class="part-head">\U0001F465 ${total} participant${total > 1 ? 's' : ''}</div>
+        ${list ? `<div class="part-list">${list}</div>` : ''}
+        <div class="part-form">
+          <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
+          <input data-part-nb type="number" min="1" max="50" value="1" />
+          <button type="button" class="mini ok" data-part-go>\U0001F64B Je viens</button>
+        </div>`;
+      const go = zone.querySelector('[data-part-go]');
+      go.addEventListener('click', async () => {
+        const pseudo = zone.querySelector('[data-part-pseudo]').value.trim().toLowerCase();
+        const nb = parseInt(zone.querySelector('[data-part-nb]').value, 10) || 1;
+        if (!pseudo) { toast('\u26a0\ufe0f Indique un pseudo (2 caract\u00e8res minimum).', false); return; }
+        const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb });
+        if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
+        localStorage.setItem('olivemap_pseudo', pseudo);
+        toast(`\U0001F64B ${pseudo} \u00b7 ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
+        loadParticipations(id, zone);
+      });
     }
 
     async function loadAdminPanel() {
