@@ -144,3 +144,21 @@ create policy "les admins gerent les participations"
 
 grant select, insert on public.participations to anon, authenticated;
 grant delete on public.participations to authenticated;
+
+-- ============================================================
+-- 9) PHOTOS : bucket public + upload réservé aux admins
+-- ============================================================
+insert into storage.buckets (id, name, public)
+  values ('photos', 'photos', true)
+  on conflict (id) do nothing;
+
+drop policy if exists "photos lecture publique" on storage.objects;
+create policy "photos lecture publique"
+  on storage.objects for select
+  using (bucket_id = 'photos');
+
+drop policy if exists "photos upload admin" on storage.objects;
+create policy "photos upload admin"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'photos' and public.is_admin());

@@ -28,6 +28,8 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 **🙋 Participations** : dans la popup de tout arbre validé, n'importe qui peut s'inscrire (« 🙋 Je viens ») avec son pseudo et un nombre de personnes. Le total et la liste apparaissent dans la popup. Nécessite la section 8 de `supabase.sql`.
 
+**📷 Photo réelle** : dans le formulaire (modes créer/modifier, donc admins), le bouton « 📷 Prendre / choisir une photo » ouvre l’appareil photo du téléphone, **redimensionne l’image à 1024 px** et l’envoie dans le bucket public Supabase Storage `photos` ; l’URL obtenue remplit automatiquement le champ photo (les visiteurs qui proposent un arbre collent une URL). Nécessite la section 9 de `supabase.sql` (bucket + politiques).
+
 **👑 Panneau admin (bouton 👑 du site)**
 
 - Connexion par **identifiant (pseudo) + mot de passe** — pas d'email affiché. Le pseudo est mappé en interne vers le compte système Supabase `pseudo@olivemap.claret`. Le mot de passe n'est jamais stocké en clair (bcrypt + sel, côté Supabase).
