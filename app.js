@@ -621,7 +621,7 @@ function adminsRow(email, removable) {
 }
 
 const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🪮 râteau', filet: '🥅 filet', bache: '🟦 bâche', deux: '🪜 🧺' };
+const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🪮 râteau', bache: '🥅 bâche ou filet', filet: '🥅 bâche ou filet', deux: '🪜 🧺' };
 
 async function loadParticipations(id, zone, quand) {
   if (!sb) return;
@@ -652,8 +652,7 @@ async function loadParticipations(id, zone, quand) {
       <label><input type="checkbox" data-ap value="echelle" />🪜</label>
       <label><input type="checkbox" data-ap value="caisses" />🧺</label>
       <label><input type="checkbox" data-ap value="rateau" />🪮</label>
-      <label><input type="checkbox" data-ap value="filet" title="filet" />🥅</label>
-      <label><input type="checkbox" data-ap value="bache" title="bâche" />🟦</label>
+      <label><input type="checkbox" data-ap value="bache" title="bâche ou filet" />🥅</label>
     </div>`;
   zone.querySelectorAll('[data-pid]').forEach((b) => {
     b.addEventListener('click', async () => {
