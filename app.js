@@ -68,10 +68,13 @@ function ownerBadge(type) {
   return `<span class="state-badge owner-${key}">${OWNER_LABELS[key]}</span>`;
 }
 
-function popupHtml(props) {
+function popupHtml(props, coords) {
   const rows = [];
   const actPending = props.statut === 'attente' && isAdminUser;
   const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
+  const shareRow = props.id && props.statut === 'valide'
+    ? `<div class="popup-actions"><button class="mini edit" data-share>🔗 Partager l'arbre</button></div>`
+    : '';
   if (props.statut === 'attente') rows.push(['Validation', '\u23f3 En attente \u2014 visible des admins uniquement']);
   if (props.type || props.production) {
     rows.push([
@@ -120,6 +123,7 @@ function popupHtml(props) {
       <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
       <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
     ${adminRow}
+    ${shareRow}
   </div>`;
 }
 
@@ -151,7 +155,7 @@ function render() {
   feats.forEach((f) => {
     const past = (f.properties || {}).ramassage ? new Date(f.properties.ramassage) < new Date() : false;
     const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}, past) });
-    marker.bindPopup(() => popupHtml(f.properties), { maxWidth: 280 });
+    marker.bindPopup(() => popupHtml(f.properties, f.geometry.coordinates), { maxWidth: 280 });
     if (f.properties && f.properties.id) {
       marker.on('popupopen', () => {
         const el = marker.getPopup().getElement();
@@ -197,10 +201,17 @@ function render() {
         });
         const pz = el.querySelector('[data-part]');
         if (pz) loadParticipations(f.properties.id, pz, f.properties.ramassage);
+        const sh = el.querySelector('[data-share]');
+        if (sh) sh.addEventListener('click', () => {
+          const link = `${location.origin}${location.pathname}?arbre=${f.properties.id}`;
+          navigator.clipboard.writeText(link)
+            .then(() => toast('\U0001F517 Lien copi\u00e9 \u2014 colle-le pour partager cet arbre.'))
+            .catch(() => toast(link, false));
+        });
       });
     }
     marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${esc(f.properties.nom || 'Arbre')} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
-    markers.push({ marker });
+    markers.push({ marker, f });
     marker.addTo(map);
   });
   document.getElementById('counter').innerHTML =
@@ -850,7 +861,20 @@ document.getElementById('btn-refresh-admin').addEventListener('click', loadAdmin
 
 const bootAdmin = sb ? refreshAdminState() : Promise.resolve();
 
-bootAdmin.finally(() => { load(); loadEventBanner(); }).catch(() => {
+function openTreeById(id) {
+  const hit = markers.find((m) => m.f && m.f.properties && m.f.properties.id === id);
+  if (!hit) { toast('\u26a0\ufe0f Arbre introuvable (ou pas encore valid\u00e9).', false); return; }
+  const c = hit.f.geometry.coordinates;
+  map.panTo([c[1], c[0]], { animate: false });
+  hit.marker.openPopup();
+}
+
+bootAdmin.finally(() => {
+  Promise.all([load(), loadEventBanner()]).then(() => {
+    const wantedId = new URLSearchParams(location.search).get('arbre');
+    if (wantedId) openTreeById(wantedId);
+  });
+}).catch(() => {
   toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);
 });
 
