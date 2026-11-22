@@ -267,6 +267,12 @@
     .tree-icon svg { width: 100%; height: 100%; }
     .tree-icon.past { opacity: .4; filter: grayscale(1); }
     .tree-icon.pending { opacity: .45; }
+    .popup-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .badge-wait {
+      display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .4px;
+      background: #5a5233; color: #ffe9a8; border-radius: 999px; padding: 2px 8px;
+      margin-left: 6px; vertical-align: middle;
+    }
     .tree-icon.pending svg path { stroke-dasharray: 4 3; }
 
     /* ---- Toast ---- */
@@ -522,6 +528,7 @@
 
     function popupHtml(props) {
       const rows = [];
+      const actPending = props.statut === 'attente' && isAdminUser;
       if (props.statut === 'attente') rows.push(['Validation', '\u23f3 En attente \u2014 visible des admins uniquement']);
       if (props.type || props.production) {
         rows.push([
@@ -546,16 +553,17 @@
       if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
       if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
       for (const [k, v] of Object.entries(props)) {
-        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut'].includes(k) && v != null && v !== '') {
+        if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id'].includes(k) && v != null && v !== '') {
           rows.push([k, String(v)]);
         }
       }
       return `<div class="popup">
-        <h3>${props.emoji || '🫒'} ${props.nom || 'Sans nom'}</h3>
+        <h3>${props.emoji || (actPending ? '⏳' : '🫒')} ${props.nom || 'Sans nom'}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
         ${props.espece ? `<div class="species">${props.espece}</div>` : ''}
         ${props.photo ? `<img src="${props.photo}" alt="${props.nom || ''}" onerror="this.style.display='none'"/>` : ''}
         ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
         ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
+        ${actPending ? `<div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\U0001F5D1 Rejeter</button></div>` : ''}
       </div>`;
     }
 
@@ -583,6 +591,31 @@
         const past = (f.properties || {}).ramassage ? new Date(f.properties.ramassage) < new Date() : false;
         const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}, past) });
         marker.bindPopup(popupHtml(f.properties), { maxWidth: 280 });
+        if ((f.properties || {}).statut === 'attente') {
+          marker.on('popupopen', () => {
+            const el = marker.getPopup().getElement();
+            if (!el) return;
+            const act = async (kind) => {
+              const id = f.properties.id;
+              if (kind === 'ok') {
+                const { error } = await sb.from('arbres').update({ statut: 'valide' }).eq('id', id);
+                if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+                toast(`\u2705 \u00ab ${f.properties.nom} \u00bb valid\u00e9 \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
+              } else {
+                const { error } = await sb.from('arbres').delete().eq('id', id);
+                if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+                toast(`\U0001F5D1 Proposition \u00ab ${f.properties.nom} \u00bb rejet\u00e9e.`);
+              }
+              marker.closePopup();
+              if (typeof loadAdminPanel === 'function' && isAdminUser) loadAdminPanel();
+              await load();
+            };
+            const ok = el.querySelector('[data-act="ok"]');
+            const no = el.querySelector('[data-act="no"]');
+            if (ok) ok.addEventListener('click', () => act('ok'));
+            if (no) no.addEventListener('click', () => act('no'));
+          });
+        }
         marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${f.properties.nom || 'Arbre'} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
         markers.push({ marker });
         marker.addTo(map);
@@ -600,7 +633,7 @@
 
     function rowToFeature(r) {
       const p = {};
-      const props = ['nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut'];
+      const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut'];
       props.forEach((k) => {
         if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
           p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -1025,6 +1058,7 @@
       await refreshAdminState();
       showStep('admin');
       loadAdminPanel();
+      await load();
     });
 
     document.getElementById('a-user').addEventListener('keydown', (e) => {
@@ -1052,6 +1086,7 @@
       await refreshAdminState();
       hideModal();
       toast('\u{1F451} D\u00e9connect\u00e9.');
+      await load();
     });
 
     document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
