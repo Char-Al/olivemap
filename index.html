@@ -268,6 +268,8 @@
     .tree-icon.past { opacity: .4; filter: grayscale(1); }
     .tree-icon.pending { opacity: .45; }
     .popup-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .popup .p-date { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin-top: 10px; }
+    .popup .p-date input { flex: 1; min-width: 0; }
     .badge-wait {
       display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .4px;
       background: #5a5233; color: #ffe9a8; border-radius: 999px; padding: 2px 8px;
@@ -563,7 +565,9 @@
         ${props.photo ? `<img src="${props.photo}" alt="${props.nom || ''}" onerror="this.style.display='none'"/>` : ''}
         ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
         ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
-        ${actPending ? `<div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\U0001F5D1 Rejeter</button></div>` : ''}
+        ${actPending ? `
+          <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
+          <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\U0001F5D1 Rejeter</button></div>` : ''}
       </div>`;
     }
 
@@ -598,9 +602,11 @@
             const act = async (kind) => {
               const id = f.properties.id;
               if (kind === 'ok') {
-                const { error } = await sb.from('arbres').update({ statut: 'valide' }).eq('id', id);
+                const dEl = el.querySelector('[data-date]');
+                const date = dEl && dEl.value ? new Date(dEl.value).toISOString() : null;
+                const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date }).eq('id', id);
                 if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-                toast(`\u2705 \u00ab ${f.properties.nom} \u00bb valid\u00e9 \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
+                toast(`\u2705 \u00ab ${f.properties.nom} \u00bb valid\u00e9${date ? ' \u2014 ramassage pr\u00e9vu le ' + dEl.value.replace('T', ' \u00e0 ') : ''} \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
               } else {
                 const { error } = await sb.from('arbres').delete().eq('id', id);
                 if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
