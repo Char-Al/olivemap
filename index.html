@@ -236,6 +236,8 @@
     .mini.ok { background: var(--accent-strong); color: #fff; }
     .mini.ok:hover { filter: brightness(1.15); }
     .mini.no { background: #5a3a34; color: #f7c5c0; }
+    .mini.edit { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .mini.edit:hover { border-color: var(--accent); color: var(--accent); }
     .admin-row {
       display: flex; align-items: center; justify-content: space-between;
       gap: 8px; padding: 4px 0; font-size: 13px;
@@ -531,6 +533,7 @@
     function popupHtml(props) {
       const rows = [];
       const actPending = props.statut === 'attente' && isAdminUser;
+      const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
       if (props.statut === 'attente') rows.push(['Validation', '\u23f3 En attente \u2014 visible des admins uniquement']);
       if (props.type || props.production) {
         rows.push([
@@ -568,6 +571,7 @@
         ${actPending ? `
           <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
           <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\U0001F5D1 Rejeter</button></div>` : ''}
+        ${adminRow}
       </div>`;
     }
 
@@ -595,7 +599,7 @@
         const past = (f.properties || {}).ramassage ? new Date(f.properties.ramassage) < new Date() : false;
         const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}, past) });
         marker.bindPopup(() => popupHtml(f.properties), { maxWidth: 280 });
-        if ((f.properties || {}).statut === 'attente') {
+        if (f.properties && f.properties.id) {
           marker.on('popupopen', () => {
             const el = marker.getPopup().getElement();
             if (!el) return;
@@ -620,6 +624,24 @@
             const no = el.querySelector('[data-act="no"]');
             if (ok) ok.addEventListener('click', () => act('ok'));
             if (no) no.addEventListener('click', () => act('no'));
+            const btnEdit = el.querySelector('[data-act="edit"]');
+            if (btnEdit) btnEdit.addEventListener('click', () => { marker.closePopup(); startEdit(f.properties, f.geometry.coordinates); });
+            const btnUnval = el.querySelector('[data-act="unval"]');
+            if (btnUnval) btnUnval.addEventListener('click', async () => {
+              const { error } = await sb.from('arbres').update({ statut: 'attente' }).eq('id', f.properties.id);
+              if (error) { toast('⚠️ ' + error.message, false); return; }
+              marker.closePopup();
+              toast(`⏳ « ${f.properties.nom} » remis en attente — visible des admins uniquement.`);
+              await load();
+            });
+            const btnDel = el.querySelector('[data-act="del"]');
+            if (btnDel) btnDel.addEventListener('click', async () => {
+              const { error } = await sb.from('arbres').delete().eq('id', f.properties.id);
+              if (error) { toast('⚠️ ' + error.message, false); return; }
+              marker.closePopup();
+              toast(`🗑 « ${f.properties.nom} » supprimé.`);
+              await load();
+            });
           });
         }
         marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${f.properties.nom || 'Arbre'} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
@@ -709,9 +731,9 @@
     addBadge.addEventListener('click', () => toggleAdd(false));
 
     function setFormMode(target) {
-      document.getElementById('modal-title').textContent = target === 'create' ? '🫒 Nouvel arbre' : '🙋 Proposer un arbre';
-      document.getElementById('btn-submit-form').textContent = target === 'create' ? "Créer l'arbre" : 'Envoyer la proposition';
-      document.getElementById('ramassage-row').style.display = target === 'create' ? '' : 'none';
+      document.getElementById('modal-title').textContent = target === 'create' ? '🫒 Nouvel arbre' : (target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre');
+      document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : (target === 'create' ? "Créer l'arbre" : 'Envoyer la proposition');
+      document.getElementById('ramassage-row').style.display = target === 'propose' ? 'none' : '';
     }
 
     function showStep(name) {
@@ -739,7 +761,7 @@
       if (val('f-notes')) props.notes = val('f-notes');
       if (document.getElementById('f-kids').checked) props.kids_friendly = true;
       if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
-      if (addModeTarget === 'create' && val('f-ramassage')) props.ramassage = val('f-ramassage');
+      if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
       return props;
     }
 
@@ -800,6 +822,72 @@
       const input = document.getElementById('token-input');
       input.value = '';
       input.focus();
+    }
+
+    let editTreeId = null;
+
+    function localDT(v) {
+      const d = new Date(v);
+      const p = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    function fillForm(props) {
+      document.getElementById('f-nom').value = props.nom || '';
+      document.getElementById('f-type').value = props.type === 'mairie' ? 'mairie' : 'particulier';
+      document.getElementById('f-production').value = String(props.production || 2);
+      document.getElementById('f-espece').value = props.espece || '';
+      document.getElementById('f-hauteur').value = props.hauteur_m ?? '';
+      document.getElementById('f-circonf').value = props.circonference_cm ?? '';
+      document.getElementById('f-annee').value = props.annee_plantation ?? '';
+      const etat = String(props.etat || 'bon').toLowerCase();
+      document.getElementById('f-etat').value = ['bon', 'moyen', 'mauvais'].includes(etat) ? etat : 'bon';
+      document.getElementById('f-photo').value = props.photo || '';
+      document.getElementById('f-notes').value = props.notes || '';
+      document.getElementById('f-kids').checked = !!props.kids_friendly;
+      document.getElementById('f-pieton').checked = !!props.acces_pieton;
+      document.getElementById('f-ramassage').value = props.ramassage ? localDT(props.ramassage) : '';
+    }
+
+    function startEdit(props, coords) {
+      if (!sb || !props.id) return;
+      addModeTarget = 'edit';
+      editTreeId = props.id;
+      fillForm(props);
+      toggleAdd(false);
+      document.getElementById('coords').textContent = coords ? `[${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}]` : '';
+      document.getElementById('form-err').classList.remove('visible');
+      setFormMode('edit');
+      showStep('form');
+    }
+
+    async function updateFeature(id) {
+      const props = collectFormValues();
+      if (!props.nom) return;
+      editTreeId = id;
+      showStep('commit');
+      document.getElementById('commit-msg').textContent = 'Enregistrement des modifications…';
+      const { error } = await sb.from('arbres').update({
+        nom: props.nom,
+        type: props.type,
+        production: props.production,
+        etat: props.etat,
+        espece: props.espece || null,
+        hauteur_m: props.hauteur_m || null,
+        circonference_cm: props.circonference_cm || null,
+        annee_plantation: props.annee_plantation || null,
+        photo: props.photo || null,
+        notes: props.notes || null,
+        kids_friendly: !!props.kids_friendly,
+        acces_pieton: !!props.acces_pieton,
+        ramassage: props.ramassage || null,
+      }).eq('id', id);
+      editTreeId = null;
+      hideModal();
+      if (error) { toast('⚠️ ' + error.message, false); return; }
+      toast('✅ Modifications enregistrées.');
+      if (isAdminUser) loadAdminPanel();
+      await load();
     }
 
     async function proposeFeature(feature) {
@@ -890,6 +978,10 @@
         const err = document.getElementById('form-err');
         err.textContent = 'Le nom est obligatoire.';
         err.classList.add('visible');
+        return;
+      }
+      if (addModeTarget === 'edit') {
+        if (editTreeId) updateFeature(editTreeId);
         return;
       }
       pendingFeature = pendingFeatureOf(props, pendingCoords);
