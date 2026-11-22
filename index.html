@@ -594,7 +594,7 @@
       feats.forEach((f) => {
         const past = (f.properties || {}).ramassage ? new Date(f.properties.ramassage) < new Date() : false;
         const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}, past) });
-        marker.bindPopup(popupHtml(f.properties), { maxWidth: 280 });
+        marker.bindPopup(() => popupHtml(f.properties), { maxWidth: 280 });
         if ((f.properties || {}).statut === 'attente') {
           marker.on('popupopen', () => {
             const el = marker.getPopup().getElement();
@@ -1097,9 +1097,9 @@
 
     document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
 
-    if (sb) { refreshAdminState(); }
+    const bootAdmin = sb ? refreshAdminState() : Promise.resolve();
 
-    load().catch(() => {
+    bootAdmin.finally(() => load()).catch(() => {
       toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);
     });
   </script>
