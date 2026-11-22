@@ -40,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v9`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v10`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -128,4 +128,4 @@ Si tu ne touches à rien d'autre, la carte se recadre automatiquement sur tes po
 
 ## 🛠️ Stack
 
-HTML/CSS/JS vanilla + [Leaflet](https://leafletjs.com/) (CDN) + tuiles OpenStreetMap. Aucun build, aucune dépendance à installer, aucune clé API.
+HTML (`index.html`) / CSS (`styles.css`) / JS (`app.js`) vanilla + [Leaflet](https://leafletjs.com/) (CDN) + tuiles OpenStreetMap. Aucun build, aucune dépendance à installer, aucune clé API.

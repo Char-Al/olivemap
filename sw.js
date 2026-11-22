@@ -1,11 +1,13 @@
 /* Olivemap service worker — offline shell + tuiles OSM */
-const CACHE = 'olivemap-v9';
+const CACHE = 'olivemap-v10';
 const TILES = 'olivemap-tiles';
 
 const SHELL = [
   './',
   './index.html',
   './arbres.geojson',
+  './styles.css',
+  './app.js',
   './icon.svg',
   './icon-maskable.svg',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

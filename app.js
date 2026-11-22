@@ -1,0 +1,800 @@
+/* Olivemap — application (vanilla JS + Leaflet + Supabase) */
+const DEFAULT_VIEW = { center: [43.8619, 3.9047], zoom: 16 };
+const OWNER_COLORS = { mairie: '#4a8fc7', particulier: '#7fb069' };
+const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
+const ADMIN_EMAIL_DOMAIN = '@olivemap.claret';
+const ZONE = { lat: DEFAULT_VIEW.center[0], lng: DEFAULT_VIEW.center[1], km: 3 };
+const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_kYKGqGknRPqJyJemHVVNLw_jYRT_N4R';
+let sb = null;
+try {
+  if (typeof supabase !== 'undefined') sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+} catch (e) { sb = null; }
+
+const map = L.map('map', { zoomControl: false }).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+const zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
+  radius: ZONE.km * 1000,
+  color: '#ffb020', weight: 3, dashArray: '10 8', fillOpacity: 0.05,
+}).addTo(map);
+
+const stateLabels = { 'bon': 'Bon état', 'moyen': 'Moyen', 'mauvais': 'Mauvais état' };
+let markers = [];
+let addMode = false;
+
+function oliveGlyphs(prod) {
+  const S = 12;
+  if (prod >= 3) {
+    return `<text x="10.5" y="16.5" text-anchor="middle" font-size="${S}">🫒</text>
+      <text x="23.5" y="16.5" text-anchor="middle" font-size="${S}">🫒</text>
+      <text x="17" y="27" text-anchor="middle" font-size="${S}">🫒</text>`;
+  }
+  if (prod === 2) {
+    return `<text x="10.5" y="21" text-anchor="middle" font-size="${S}">🫒</text>
+      <text x="23.5" y="21" text-anchor="middle" font-size="${S}">🫒</text>`;
+  }
+  return `<text x="17" y="21" text-anchor="middle" font-size="${S}">🫒</text>`;
+}
+
+function markerIcon(props, past) {
+  const color = OWNER_COLORS[props.type] || '#7fb069';
+  const pending = props.statut === 'attente';
+  const prod = Math.min(Math.max(parseInt(props.production, 10) || 1, 1), 3);
+  return L.divIcon({
+    className: 'tree-marker',
+    html: `<div class="tree-icon${past ? ' past' : ''}${pending ? ' pending' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="${color}" stroke-width="2"/>
+      <circle cx="17" cy="38" r="2.4" fill="${color}"/>
+      ${oliveGlyphs(prod)}
+    </svg></div>`,
+    iconSize: [34, 46],
+    iconAnchor: [17, 44],
+    popupAnchor: [0, -44],
+  });
+}
+
+function productionDots(n) {
+  const v = Math.min(Math.max(parseInt(n, 10) || 0, 1), 3);
+  return `<span class="prod-dots" title="Rendement : ${v}/3">${'\u25CF'.repeat(v)}${'\u25CB'.repeat(3 - v)}</span>`;
+}
+
+function ownerBadge(type) {
+  const key = type === 'mairie' ? 'mairie' : 'particulier';
+  return `<span class="state-badge owner-${key}">${OWNER_LABELS[key]}</span>`;
+}
+
+function popupHtml(props) {
+  const rows = [];
+  const actPending = props.statut === 'attente' && isAdminUser;
+  const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
+  if (props.statut === 'attente') rows.push(['Validation', '\u23f3 En attente \u2014 visible des admins uniquement']);
+  if (props.type || props.production) {
+    rows.push([
+      'Statut',
+      `${props.type ? ownerBadge(props.type) : ''}` +
+      `${props.type && props.production ? ' ' : ''}` +
+      `${props.production ? productionDots(props.production) : ''}`,
+    ]);
+  }
+  if (props.hauteur_m) rows.push(['Hauteur', `${props.hauteur_m} m`]);
+  if (props.circonference_cm) rows.push(['Circonférence', `${props.circonference_cm} cm`]);
+  if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
+  if (props.etat) {
+    const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || props.etat}</span>`]);
+  }
+  if (props.ramassage) {
+    const d = new Date(props.ramassage);
+    const past = d < new Date();
+    rows.push([past ? 'Ramassé' : 'Ramassage', `${past ? '✅' : '🚚'} ${d.toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`]);
+  }
+  if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
+  if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
+  for (const [k, v] of Object.entries(props)) {
+    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id'].includes(k) && v != null && v !== '') {
+      rows.push([k, String(v)]);
+    }
+  }
+  return `<div class="popup">
+    <h3>${props.emoji || (actPending ? '⏳' : '🫒')} ${props.nom || 'Sans nom'}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
+    ${props.espece ? `<div class="species">${props.espece}</div>` : ''}
+    ${props.photo ? `<img src="${props.photo}" alt="${props.nom || ''}" onerror="this.style.display='none'"/>` : ''}
+    ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
+    ${props.notes ? `<div class="notes">${props.notes}</div>` : ''}
+    ${props.id && props.statut !== 'attente' && props.ramassage && new Date(props.ramassage) >= new Date() ? '<div class="part-zone" data-part></div>' : ''}
+    ${actPending ? `
+      <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
+      <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
+    ${adminRow}
+  </div>`;
+}
+
+function visibleFeatures() {
+  const showM = document.getElementById('legend-mairie').classList.contains('active');
+  const showP = document.getElementById('legend-particulier').classList.contains('active');
+  const op = document.getElementById('btn-filter-open').classList.contains('active');
+  const now = new Date();
+  return allFeatures.filter((f) => {
+    const p = f.properties || {};
+    if (p.type === 'mairie' && !showM) return false;
+    if (p.type === 'particulier' && !showP) return false;
+    if (op) {
+      if (p.statut === 'attente') return false;
+      if (p.ramassage && new Date(p.ramassage) < now) return false;
+    }
+    return true;
+  });
+}
+
+function render() {
+  markers.forEach(({ marker }) => map.removeLayer(marker));
+  markers = [];
+  const feats = visibleFeatures();
+  feats.forEach((f) => {
+    const past = (f.properties || {}).ramassage ? new Date(f.properties.ramassage) < new Date() : false;
+    const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}, past) });
+    marker.bindPopup(() => popupHtml(f.properties), { maxWidth: 280 });
+    if (f.properties && f.properties.id) {
+      marker.on('popupopen', () => {
+        const el = marker.getPopup().getElement();
+        if (!el) return;
+        const act = async (kind) => {
+          const id = f.properties.id;
+          if (kind === 'ok') {
+            const dEl = el.querySelector('[data-date]');
+            const date = dEl && dEl.value ? new Date(dEl.value).toISOString() : null;
+            const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date }).eq('id', id);
+            if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+            toast(`\u2705 \u00ab ${f.properties.nom} \u00bb valid\u00e9${date ? ' \u2014 ramassage pr\u00e9vu le ' + dEl.value.replace('T', ' \u00e0 ') : ''} \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
+          } else {
+            const { error } = await sb.from('arbres').delete().eq('id', id);
+            if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+            toast(`\u{1F5D1} Proposition \u00ab ${f.properties.nom} \u00bb rejet\u00e9e.`);
+          }
+          marker.closePopup();
+          if (typeof loadAdminPanel === 'function' && isAdminUser) loadAdminPanel();
+          await load();
+        };
+        const ok = el.querySelector('[data-act="ok"]');
+        const no = el.querySelector('[data-act="no"]');
+        if (ok) ok.addEventListener('click', () => act('ok'));
+        if (no) no.addEventListener('click', () => act('no'));
+        const btnEdit = el.querySelector('[data-act="edit"]');
+        if (btnEdit) btnEdit.addEventListener('click', () => { marker.closePopup(); startEdit(f.properties, f.geometry.coordinates); });
+        const btnUnval = el.querySelector('[data-act="unval"]');
+        if (btnUnval) btnUnval.addEventListener('click', async () => {
+          const { error } = await sb.from('arbres').update({ statut: 'attente' }).eq('id', f.properties.id);
+          if (error) { toast('⚠️ ' + error.message, false); return; }
+          marker.closePopup();
+          toast(`⏳ « ${f.properties.nom} » remis en attente — visible des admins uniquement.`);
+          await load();
+        });
+        const btnDel = el.querySelector('[data-act="del"]');
+        if (btnDel) btnDel.addEventListener('click', async () => {
+          const { error } = await sb.from('arbres').delete().eq('id', f.properties.id);
+          if (error) { toast('⚠️ ' + error.message, false); return; }
+          marker.closePopup();
+          toast(`🗑 « ${f.properties.nom} » supprimé.`);
+          await load();
+        });
+        const pz = el.querySelector('[data-part]');
+        if (pz) loadParticipations(f.properties.id, pz, f.properties.ramassage);
+      });
+    }
+    marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${f.properties.nom || 'Arbre'} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
+    markers.push({ marker });
+    marker.addTo(map);
+  });
+  document.getElementById('counter').innerHTML =
+    `<b>${feats.length}</b> arbre${feats.length > 1 ? 's' : ''} sur ${allFeatures.length}`;
+}
+
+function toast(html, autohide = true) {
+  const el = document.getElementById('toast');
+  el.innerHTML = html + '<button type="button" class="toast-close" title="Fermer" aria-label="Fermer">\u2715</button>';
+  el.classList.add('visible');
+  el.querySelector('.toast-close').addEventListener('click', () => el.classList.remove('visible'));
+  if (toast._t) { clearTimeout(toast._t); toast._t = null; }
+  if (autohide) toast._t = setTimeout(() => el.classList.remove('visible'), 6000);
+}
+
+function rowToFeature(r) {
+  const p = {};
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut'];
+  props.forEach((k) => {
+    if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
+      p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
+    }
+  });
+  return { type: 'Feature', properties: p, geometry: { type: 'Point', coordinates: [Number(r.lng), Number(r.lat)] } };
+}
+
+async function load() {
+  const features = [];
+  let baseOk = false;
+  if (sb) {
+    try {
+      const { data: rows, error } = await sb.from('arbres').select('*');
+      if (!error && Array.isArray(rows)) {
+        rows.forEach((r) => features.push(rowToFeature(r)));
+        baseOk = true;
+      }
+    } catch (e) { /* base inaccessible */ }
+  }
+  if (!baseOk) {
+    try {
+      const res = await fetch('arbres.geojson');
+      const data = await res.json();
+      features.push(...(data.features || []).filter((f) => f.geometry && f.geometry.type === 'Point'));
+      if (sb) toast('⚠️ Base injoignable — affichage de la copie de sauvegarde (lecture seule).', false);
+    } catch (e) { /* aucune source disponible */ }
+  }
+
+  allFeatures = features;
+
+  if (allFeatures.length === 1) {
+    map.setView([allFeatures[0].geometry.coordinates[1], allFeatures[0].geometry.coordinates[0]], 16);
+  } else if (allFeatures.length > 1) {
+    map.fitBounds(L.latLngBounds(allFeatures.map((f) => [f.geometry.coordinates[1], f.geometry.coordinates[0]])).pad(0.25));
+  }
+
+  render();
+}
+
+document.getElementById('legend-particulier').addEventListener('click', () => {
+  document.getElementById('legend-particulier').classList.toggle('active');
+  render();
+});
+document.getElementById('legend-mairie').addEventListener('click', () => {
+  document.getElementById('legend-mairie').classList.toggle('active');
+  render();
+});
+document.getElementById('btn-filter-open').addEventListener('click', () => {
+  document.getElementById('btn-filter-open').classList.toggle('active');
+  render();
+});
+
+document.getElementById('btn-locate').addEventListener('click', () => {
+  map.locate({ setView: true, maxZoom: 16 });
+});
+map.on('locationfound', () => toast('📍 Position trouvée.'));
+map.on('locationerror', () => toast('⚠️ Localisation impossible (autorisation refusée ?).'));
+
+const addBadge = document.getElementById('add-badge');
+function toggleAdd(on) {
+  addMode = on === undefined ? !addMode : on;
+  addBadge.classList.toggle('visible', addMode);
+  document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
+}
+let addModeTarget = 'propose';
+const btnPropose = document.getElementById('btn-propose');
+btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; toggleAdd(); });
+addBadge.addEventListener('click', () => toggleAdd(false));
+
+function setFormMode(target) {
+  document.getElementById('modal-title').textContent = target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre';
+  document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : 'Envoyer la proposition';
+  document.getElementById('ramassage-row').style.display = target === 'propose' ? 'none' : '';
+  const pb = document.getElementById('btn-photo');
+  pb.textContent = '📷 Prendre / choisir une photo';
+  pb.disabled = false;
+  document.getElementById('f-photo-file').value = '';
+}
+
+function showStep(name) {
+  ['form', 'login', 'admin'].forEach((s) => {
+    document.getElementById(`step-${s}`).classList.toggle('visible', s === name);
+  });
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+
+function hideModal() {
+  document.getElementById('modal-overlay').classList.remove('visible');
+}
+
+function collectFormValues() {
+  const num = (v) => { const n = parseFloat(v); return isNaN(n) ? undefined : n; };
+  const val = (id) => document.getElementById(id).value.trim();
+  const props = { nom: val('f-nom'), type: document.getElementById('f-type').value };
+  props.production = parseInt(document.getElementById('f-production').value, 10) || 2;
+  props.etat = document.getElementById('f-etat').value;
+  if (val('f-espece')) props.espece = val('f-espece');
+  const h = num(val('f-hauteur')); if (h !== undefined) props.hauteur_m = h;
+  const c = num(val('f-circonf')); if (c !== undefined) props.circonference_cm = c;
+  const a = num(val('f-annee')); if (a !== undefined) props.annee_plantation = a;
+  if (val('f-photo')) props.photo = val('f-photo');
+  if (val('f-notes')) props.notes = val('f-notes');
+  if (document.getElementById('f-kids').checked) props.kids_friendly = true;
+  if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
+  if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
+  return props;
+}
+
+let editTreeId = null;
+
+function localDT(v) {
+  const d = new Date(v);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fillForm(props) {
+  document.getElementById('f-nom').value = props.nom || '';
+  document.getElementById('f-type').value = props.type === 'mairie' ? 'mairie' : 'particulier';
+  document.getElementById('f-production').value = String(props.production || 2);
+  document.getElementById('f-espece').value = props.espece || '';
+  document.getElementById('f-hauteur').value = props.hauteur_m ?? '';
+  document.getElementById('f-circonf').value = props.circonference_cm ?? '';
+  document.getElementById('f-annee').value = props.annee_plantation ?? '';
+  const etat = String(props.etat || 'bon').toLowerCase();
+  document.getElementById('f-etat').value = ['bon', 'moyen', 'mauvais'].includes(etat) ? etat : 'bon';
+  document.getElementById('f-photo').value = props.photo || '';
+  document.getElementById('f-notes').value = props.notes || '';
+  document.getElementById('f-kids').checked = !!props.kids_friendly;
+  document.getElementById('f-pieton').checked = !!props.acces_pieton;
+  document.getElementById('f-ramassage').value = props.ramassage ? localDT(props.ramassage) : '';
+}
+
+function startEdit(props, coords) {
+  if (!sb || !props.id) return;
+  addModeTarget = 'edit';
+  editTreeId = props.id;
+  fillForm(props);
+  toggleAdd(false);
+  document.getElementById('coords').textContent = coords ? `[${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}]` : '';
+  document.getElementById('form-err').classList.remove('visible');
+  setFormMode('edit');
+  showStep('form');
+}
+
+async function updateFeature(id) {
+  const props = collectFormValues();
+  if (!props.nom) return;
+  editTreeId = id;
+  const { error } = await sb.from('arbres').update({
+    nom: props.nom,
+    type: props.type,
+    production: props.production,
+    etat: props.etat,
+    espece: props.espece || null,
+    hauteur_m: props.hauteur_m || null,
+    circonference_cm: props.circonference_cm || null,
+    annee_plantation: props.annee_plantation || null,
+    photo: props.photo || null,
+    notes: props.notes || null,
+    kids_friendly: !!props.kids_friendly,
+    acces_pieton: !!props.acces_pieton,
+    ramassage: props.ramassage || null,
+  }).eq('id', id);
+  editTreeId = null;
+  hideModal();
+  if (error) { toast('⚠️ ' + error.message, false); return; }
+  toast('✅ Modifications enregistrées.');
+  if (isAdminUser) loadAdminPanel();
+  await load();
+}
+
+async function proposeFeature(props) {
+  if (!sb) {
+    toast('⚠️ Base de données injoignable — proposition impossible pour le moment.', false);
+    return;
+  }
+  const p = props;
+  const [lng, lat] = pendingCoords;
+  const { error } = await sb.from('arbres').insert({
+    nom: p.nom,
+    type: p.type,
+    production: p.production,
+    etat: p.etat,
+    espece: p.espece || null,
+    hauteur_m: p.hauteur_m || null,
+    circonference_cm: p.circonference_cm || null,
+    annee_plantation: p.annee_plantation || null,
+    photo: p.photo || null,
+    notes: p.notes || null,
+    kids_friendly: !!p.kids_friendly,
+    acces_pieton: !!p.acces_pieton,
+    ramassage: p.ramassage || null,
+    lng,
+    lat,
+    statut: 'attente',
+  });
+  if (error) {
+    hideModal();
+    const missing = /PGRST205|does not exist|relation/i.test(error.message || '');
+    toast(missing
+      ? '⚠️ Table non créée : exécute <code>supabase.sql</code> dans le SQL Editor du projet Supabase.'
+      : `Échec de l'envoi : ${error.message}`, false);
+    return;
+  }
+  hideModal();
+  if (isAdminUser) {
+    map.panTo([lat, lng]);
+    await load();
+    if (typeof loadAdminPanel === 'function') loadAdminPanel();
+    toast(`🫒 Proposition « <b>${p.nom}</b> » enregistrée — visible sur la carte (en pointillés) jusqu'à validation.`, false);
+  } else {
+    toast(`🙏 Merci ! La proposition « <b>${p.nom}</b> » attend la validation.`, false);
+  }
+}
+
+let pendingCoords = null;
+
+map.on('click', (e) => {
+  if (!addMode) return;
+  if (map.distance(e.latlng, L.latLng(ZONE.lat, ZONE.lng)) > ZONE.km * 1000) {
+    toggleAdd(false);
+    toast(`⚠️ Trop loin du village — les propositions sont limitées à ${ZONE.km} km autour de Claret.`, false);
+    return;
+  }
+  toggleAdd(false);
+  pendingCoords = [e.latlng.lng, e.latlng.lat];
+  setFormMode(addModeTarget);
+  document.getElementById('coords').textContent = `[${e.latlng.lng.toFixed(6)}, ${e.latlng.lat.toFixed(6)}]`;
+  document.getElementById('form-err').classList.remove('visible');
+  showStep('form');
+});
+
+document.getElementById('tree-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const props = collectFormValues();
+  if (!props.nom) {
+    const err = document.getElementById('form-err');
+    err.textContent = 'Le nom est obligatoire.';
+    err.classList.add('visible');
+    return;
+  }
+  if (addModeTarget === 'edit') {
+    if (editTreeId) updateFeature(editTreeId);
+    return;
+  }
+  proposeFeature(props);
+});
+
+async function photoToBlob(file) {
+  const dataUrl = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+  const max = 1024;
+  const scale = Math.min(1, max / Math.max(img.width, img.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  return await new Promise((res) => canvas.toBlob((b) => res(b), 'image/jpeg', 0.82));
+}
+
+document.getElementById('btn-photo').addEventListener('click', () => {
+  if (addModeTarget === 'propose') { toast('\u26a0\ufe0f Pour une proposition, colle simplement une URL de photo (l\'envoi de fichier est r\u00e9serv\u00e9 aux admins).', false); return; }
+  document.getElementById('f-photo-file').click();
+});
+
+document.getElementById('f-photo-file').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const phErr = document.getElementById('form-err');
+  phErr.classList.remove('visible');
+  if (!sb) { phErr.textContent = 'Supabase indisponible : colle une URL de photo.'; phErr.classList.add('visible'); return; }
+  const btn = document.getElementById('btn-photo');
+  btn.textContent = '\u23f3 Traitement\u2026';
+  btn.disabled = true;
+  try {
+    const blob = await photoToBlob(file);
+    if (!blob) throw new Error('format de fichier non reconnu');
+    const path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.jpg';
+    const { error } = await sb.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg' });
+    if (error) throw error;
+    const { data: pub } = sb.storage.from('photos').getPublicUrl(path);
+    document.getElementById('f-photo').value = pub.publicUrl;
+    btn.textContent = '\u{0001F4F7} Photo \u2713';
+  } catch (err) {
+    btn.textContent = '\u{0001F4F7} Prendre / choisir une photo';
+    btn.disabled = false;
+    phErr.textContent = 'Envoi de la photo impossible : ' + (err.message || err);
+    phErr.classList.add('visible');
+    return;
+  }
+});
+
+document.getElementById('modal-close').addEventListener('click', hideModal);
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) hideModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideModal();
+});
+
+let isAdminUser = false;
+let currentEmail = null;
+
+async function refreshAdminState() {
+  isAdminUser = false;
+  currentEmail = null;
+  try {
+    const { data } = await sb.auth.getUser();
+    currentEmail = (data && data.user && data.user.email) || null;
+    if (currentEmail) {
+      const { data: ok, error } = await sb.rpc('is_admin');
+      if (!error && ok === true) isAdminUser = true;
+    }
+  } catch (e) { isAdminUser = false; }
+  const b = document.getElementById('btn-admin');
+  b.classList.toggle('active', isAdminUser);
+  b.title = isAdminUser ? `Espace admin (${pseudoOf(currentEmail)})` : 'Espace admin';
+  const lp = document.getElementById('legend-pending');
+  if (lp) lp.style.display = isAdminUser ? 'flex' : 'none';
+  return isAdminUser;
+}
+
+function adminsRow(email, removable) {
+  const row = document.createElement('div');
+  row.className = 'admin-row';
+  row.innerHTML = `<span>\u{1F451} ${pseudoOf(email)}${removable ? '' : ' (toi)'}</span>${removable ? `<button class="mini no" data-e="${email}">\u{1F5D1} Effacer</button>` : ''}`;
+  if (removable) {
+    row.querySelector('button').addEventListener('click', async () => {
+      const { error } = await sb.from('admins').delete().eq('email', email);
+      if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+      toast(`\u{1F451} ${pseudoOf(email)} n'est plus administrateur.`);
+      loadAdminPanel();
+    });
+  }
+  return row;
+}
+
+const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+
+async function loadParticipations(id, zone, quand) {
+  if (!sb) return;
+  zone.innerHTML = '<div class="hint">⏳ Chargement…</div>';
+  const { data, error } = await sb.from('participations').select('id, pseudo, nb_personnes').eq('arbre_id', id).order('cree_le');
+  if (error) { zone.innerHTML = '<div class="hint">⚠️ ' + error.message + '</div>'; return; }
+  const total = (data || []).reduce((a, r) => a + (r.nb_personnes || 1), 0);
+  const quandTxt = quand ? ` 🚚 ${new Date(quand).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : '';
+  const list = (data || []).map((r) => {
+    const del = isAdminUser
+      ? ` <button type="button" class="mini no part-del" data-pid="${r.id}" title="Retirer ce volontaire">✕</button>`
+      : '';
+    return `<div class="part-row">· <b>${esc(r.pseudo)}</b> (${r.nb_personnes})${del}</div>`;
+  }).join('');
+  const me = localStorage.getItem('olivemap_pseudo') || '';
+  zone.innerHTML = `
+    <div class="part-head">👥 ${total} participant${total > 1 ? 's' : ''}${quandTxt}</div>
+    ${list ? `<div class="part-list">${list}</div>` : ''}
+    <div class="part-form">
+      <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
+      <input data-part-nb type="number" min="1" max="50" value="1" />
+      <button type="button" class="mini ok" data-part-go>🙋 Je viens</button>
+    </div>`;
+  zone.querySelectorAll('[data-pid]').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const { error: err } = await sb.from('participations').delete().eq('id', b.dataset.pid);
+      if (err) { toast('⚠️ ' + err.message, false); return; }
+      toast('❌ Volontaire retiré.');
+      loadParticipations(id, zone, quand);
+    });
+  });
+  const go = zone.querySelector('[data-part-go]');
+  go.addEventListener('click', async () => {
+    const pseudo = zone.querySelector('[data-part-pseudo]').value.trim().toLowerCase();
+    const nb = parseInt(zone.querySelector('[data-part-nb]').value, 10) || 1;
+    if (!pseudo) { toast('⚠️ Indique un pseudo.', false); return; }
+    const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb });
+    if (err) { toast('⚠️ ' + err.message, false); return; }
+    localStorage.setItem('olivemap_pseudo', pseudo);
+    toast(`🙋 ${pseudo} · ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
+    loadParticipations(id, zone, quand);
+  });
+}
+
+async function loadAdminPanel() {
+  document.getElementById('admin-info').textContent =
+    `Connect\u00e9 : ${currentEmail ? pseudoOf(currentEmail) : '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
+  const pl = document.getElementById('pending-list');
+  const al = document.getElementById('admins-list');
+  pl.innerHTML = '';
+  al.innerHTML = '';
+  if (!isAdminUser) {
+    pl.innerHTML = '<div class="hint">Ton compte n\'est pas dans la liste des administrateurs. Demande \u00e0 un admin existant de l\'ajouter.</div>';
+    return;
+  }
+  const { data: pend, error: pErr } = await sb.from('arbres').select('*').eq('statut', 'attente').order('cree_le');
+  if (pErr) {
+    pl.innerHTML = '<div class="hint">\u26a0\ufe0f Erreur de lecture des demandes : ' + pErr.message + '</div>';
+    toast('\u26a0\ufe0f ' + pErr.message, false);
+  } else if (!pend || !pend.length) {
+    pl.innerHTML = '<div class="hint">Aucune demande en attente \u{1F389}</div>';
+  } else {
+    pend.forEach((t) => {
+      const card = document.createElement('div');
+      card.className = 'pending-card';
+      card.innerHTML = `
+        <div class="p-name">${t.nom}</div>
+        <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · propos\u00e9 le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
+        <label>Date de ramassage (optionnel) <input type="datetime-local" class="p-date" /></label>
+        <div class="p-actions">
+          <button class="mini ok" data-id="${t.id}">\u2705 Valider</button>
+          <button class="mini no" data-id="${t.id}">\u{1F5D1} Rejeter</button>
+        </div>`;
+      card.querySelector('.ok').addEventListener('click', async () => {
+        const date = card.querySelector('.p-date').value;
+        const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date || null }).eq('id', t.id);
+        if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+        toast(`\u2705 \u00ab ${t.nom} \u00bb valid\u00e9${date ? ' (ramassage : ' + date + ')' : ' sans date de ramassage'}.`, false);
+        loadAdminPanel();
+        load();
+      });
+      card.querySelector('.no').addEventListener('click', async () => {
+        const { error } = await sb.from('arbres').delete().eq('id', t.id);
+        if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+        toast(`\u{1F5D1} Proposition \u00ab ${t.nom} \u00bb rejet\u00e9e.`);
+        loadAdminPanel();
+      });
+      pl.appendChild(card);
+    });
+  }
+  const at = document.getElementById('arbres-table');
+  at.innerHTML = '<div class="hint">\u23f3 Chargement\u2026</div>';
+  const { data: every, error: tErr } = await sb.from('arbres').select('id, nom, type, production, espece, statut, ramassage').order('nom');
+  if (tErr) { at.innerHTML = '<div class="hint">\u26a0\ufe0f ' + tErr.message + '</div>'; }
+  else if (!every || !every.length) { at.innerHTML = '<div class="hint">Aucun arbre en base.</div>'; }
+  else {
+    const tbl = document.createElement('table');
+    tbl.className = 'admin-tbl';
+    tbl.innerHTML = `<thead><tr><th>Nom</th><th>Prop.</th><th>Rdt</th><th>Esp\u00e8ce</th><th>Ramassage</th><th>Statut</th><th>Actions</th></tr></thead><tbody>` +
+      every.map((t) => `<tr data-id="${t.id}">
+        <td>${esc(t.nom)}</td>
+        <td>${OWNER_LABELS[t.type] || t.type || '\u2014'}</td>
+        <td>${t.production == null ? '\u2014' : t.production}</td>
+        <td>${esc(t.espece || '\u2014')}</td>
+        <td>${t.ramassage ? localDT(t.ramassage).replace('T', ' ') : '\u2014'}</td>
+        <td>${t.statut === 'valide' ? '\u2705' : '\u23f3'}</td>
+        <td><button type="button" class="mini edit" data-td="toggle">${t.statut === 'valide' ? '\u23f3 D\u00e9valider' : '\u2705 Valider'}</button> <button type="button" class="mini no" data-td="del">\u{0001F5D1}</button></td>
+      </tr>`).join('') + '</tbody>';
+    at.innerHTML = '';
+    at.appendChild(tbl);
+    tbl.querySelectorAll('tr[data-id]').forEach((tr) => {
+      const id = tr.dataset.id;
+      const row = every.find((t) => String(t.id) === id);
+      tr.querySelector('[data-td="toggle"]').addEventListener('click', async () => {
+        const ns = row.statut === 'valide' ? 'attente' : 'valide';
+        const { error } = await sb.from('arbres').update({ statut: ns }).eq('id', id);
+        if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+        toast(`${ns === 'valide' ? '\u2705' : '\u23f3'} \u00ab ${row.nom} \u00bb \u2192 ${ns}.`);
+        loadAdminPanel();
+        load();
+      });
+      tr.querySelector('[data-td="del"]').addEventListener('click', async () => {
+        if (!confirm(`Supprimer \u00ab ${row.nom} \u00bb ?`)) return;
+        const { error } = await sb.from('arbres').delete().eq('id', id);
+        if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+        toast(`\u{0001F5D1} \u00ab ${row.nom} \u00bb supprim\u00e9.`);
+        loadAdminPanel();
+        load();
+      });
+    });
+  }
+  const { data: adms, error: aErr } = await sb.from('admins').select('email').order('email');
+  if (aErr) {
+    al.innerHTML = '<div class="hint">\u26a0\ufe0f Erreur de lecture des admins : ' + aErr.message + '</div>';
+  } else if (!adms || !adms.length) {
+    al.innerHTML = '<div class="hint">Aucun admin en base (ajoute-toi via SQL le premier).</div>';
+  } else {
+    adms.forEach((a) => al.appendChild(adminsRow(a.email, a.email !== currentEmail)));
+  }
+}
+
+function authErr(message) {
+  if (/Invalid login/i.test(message)) return 'Identifiants incorrects.';
+  if (/not confirmed/i.test(message)) return "Email non confirm\u00e9 : v\u00e9rifie ta bo\u00eete (ou d\u00e9sactive \u00ab Confirm email \u00bb dans Supabase).";
+  if (/rate/i.test(message)) return "Trop d'essais \u2014 attends un instant.";
+  return message;
+}
+
+function pseudoOf(email) {
+  return (email || '').split('@')[0];
+}
+
+function readLogin() {
+  const pseudo = document.getElementById('a-user').value.trim().toLowerCase();
+  return {
+    email: pseudo + ADMIN_EMAIL_DOMAIN,
+    password: document.getElementById('a-pass').value,
+  };
+}
+
+document.getElementById('btn-admin').addEventListener('click', async () => {
+  if (!sb) { toast('\u26a0\ufe0f Supabase indisponible \u2014 recharges la page.', false); return; }
+  await refreshAdminState();
+  if (isAdminUser) { showStep('admin'); loadAdminPanel(); }
+  else { showStep('login'); }
+});
+
+document.getElementById('btn-signin').addEventListener('click', async () => {
+  const err = document.getElementById('login-err');
+  const { error } = await sb.auth.signInWithPassword(readLogin());
+  if (error) { err.textContent = authErr(error.message); err.classList.add('visible'); return; }
+  err.classList.remove('visible');
+  await refreshAdminState();
+  showStep('admin');
+  loadAdminPanel();
+  await load();
+});
+
+document.getElementById('a-user').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('a-pass').focus();
+});
+
+document.getElementById('a-pass').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-signin').click();
+});
+
+document.getElementById('btn-add-admin').addEventListener('click', async () => {
+  const raw = document.getElementById('new-admin-pseudo').value.trim().toLowerCase();
+  const v = raw + ADMIN_EMAIL_DOMAIN;
+  if (!raw) return;
+  if (!/^[a-z0-9._-]+$/.test(raw)) { toast('\u26a0\ufe0f Pseudo invalide : lettres, chiffres, point, tiret.', false); return; }
+  const { error } = await sb.from('admins').insert({ email: v });
+  if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+  document.getElementById('new-admin-pseudo').value = '';
+  toast(`\u{1F451} ${raw} est maintenant administrateur (compte syst\u00e8me ${v}).`);
+  loadAdminPanel();
+});
+
+document.getElementById('btn-signout').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  await refreshAdminState();
+  hideModal();
+  toast('\u{1F451} D\u00e9connect\u00e9.');
+  await load();
+});
+
+document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
+
+const bootAdmin = sb ? refreshAdminState() : Promise.resolve();
+
+bootAdmin.finally(() => load()).catch(() => {
+  toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);
+});
+
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('btn-install').style.display = '';
+  }
+});
+
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  if (outcome === 'accepted') toast('📲 Olivemap installé !');
+  deferredInstall = null;
+  document.getElementById('btn-install').style.display = 'none';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  document.getElementById('btn-install').style.display = 'none';
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
