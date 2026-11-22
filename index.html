@@ -349,7 +349,6 @@
         <option value="Particulier">Particuliers</option>
       </select>
       <button id="btn-filter-open" class="btn" title="Afficher uniquement les arbres dont le ramassage est prévu (ou jamais réalisé)">🚚 À ramasser</button>
-      <button id="btn-add" class="btn" title="Ajouter un arbre">＋ Point</button>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-install" class="btn" title="Installer Olivemap sur ton appareil" style="display:none">📲 Installer</button>
       <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
@@ -746,30 +745,20 @@
     map.on('locationfound', () => toast('📍 Position trouvée.'));
     map.on('locationerror', () => toast('⚠️ Localisation impossible (autorisation refusée ?).'));
 
-    const btnAdd = document.getElementById('btn-add');
     const addBadge = document.getElementById('add-badge');
     function toggleAdd(on) {
       addMode = on === undefined ? !addMode : on;
-      btnAdd.classList.toggle('active', addMode);
       addBadge.classList.toggle('visible', addMode);
       document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
     }
-    let addModeTarget = 'create';
+    let addModeTarget = 'propose';
     const btnPropose = document.getElementById('btn-propose');
-    btnAdd.addEventListener('click', () => {
-      if (!isAdminUser) {
-        toast('✋ Créer un arbre directement est réservé aux administrateurs — utilise le bouton ✋ pour proposer un arbre.', false);
-        return;
-      }
-      addModeTarget = 'create';
-      toggleAdd();
-    });
     btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; toggleAdd(); });
     addBadge.addEventListener('click', () => toggleAdd(false));
 
     function setFormMode(target) {
-      document.getElementById('modal-title').textContent = target === 'create' ? '🫒 Nouvel arbre' : (target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre');
-      document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : (target === 'create' ? "Créer l'arbre" : 'Envoyer la proposition');
+      document.getElementById('modal-title').textContent = target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre';
+      document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : 'Envoyer la proposition';
       document.getElementById('ramassage-row').style.display = target === 'propose' ? 'none' : '';
       const pb = document.getElementById('btn-photo');
       pb.textContent = '📷 Prendre / choisir une photo';
@@ -804,42 +793,6 @@
       if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
       if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
       return props;
-    }
-
-    async function createFeature(props) {
-      if (!sb) {
-        toast('⚠️ Base de données injoignable — création impossible pour le moment.', false);
-        return;
-      }
-      const [lng, lat] = pendingCoords;
-      const { error } = await sb.from('arbres').insert({
-        nom: props.nom,
-        type: props.type,
-        production: props.production,
-        etat: props.etat,
-        espece: props.espece || null,
-        hauteur_m: props.hauteur_m || null,
-        circonference_cm: props.circonference_cm || null,
-        annee_plantation: props.annee_plantation || null,
-        photo: props.photo || null,
-        notes: props.notes || null,
-        kids_friendly: !!props.kids_friendly,
-        acces_pieton: !!props.acces_pieton,
-        ramassage: props.ramassage || null,
-        lng,
-        lat,
-        statut: 'valide',
-      });
-      if (error) {
-        hideModal();
-        toast('⚠️ Échec de la création : ' + error.message, false);
-        return;
-      }
-      hideModal();
-      map.panTo([lat, lng]);
-      toast(`🫒 « <b>${props.nom}</b> » créé — visible immédiatement par tout le monde.`, false);
-      await load();
-      return true;
     }
 
     let editTreeId = null;
@@ -968,11 +921,7 @@
         if (editTreeId) updateFeature(editTreeId);
         return;
       }
-      if (addModeTarget === 'create') {
-        createFeature(props);
-      } else {
-        proposeFeature(props);
-      }
+      proposeFeature(props);
     });
 
     async function photoToBlob(file) {

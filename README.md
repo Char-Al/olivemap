@@ -6,7 +6,7 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 - **2 couleurs de points** : vert = arbre d'un particulier, bleu = arbre de la mairie
 - **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et le marqueur affiche **1, 2 ou 3 olives 🫒** selon le rendement, visible d'un coup d'œil sur la carte
 - Recherche plein texte + filtres par espèce et par propriétaire
-- **Proposition d'un arbre par n'importe quel visiteur** (bouton ✋) : le point part dans la base Supabase et attend la validation d'un admin
+- **Proposition d'un arbre par n'importe quel visiteur** (bouton 🙋) : le point part dans la base Supabase et attend la validation d'un admin
 - Bouton de géolocalisation
 - Responsive, fonctionne sur mobile
 
@@ -38,7 +38,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v3`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v4`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -66,13 +66,11 @@ Pour ajouter **un autre admin** : crée d'abord son utilisateur dans *Authentica
 
 La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les demandes, ni valider, ni gérer la liste.
 
-## ➕ Créer / proposer un arbre depuis le site
+## 🙋 Proposer un arbre depuis le site
 
-**Visiteurs (bouton ✋)** : clic à l'endroit voulu sur la carte → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin.
+**Visiteurs (bouton 🙋)** : clic à l'endroit voulu sur la carte → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin.
 
-**Administrateurs (bouton ＋ Point)** : même formulaire, mais l'arbre est créé **directement avec le statut `valide`** dans Supabase — visible immédiatement par tout le monde, sans étape de validation ni jeton ni commit. Protégé côté base par la RLS : seuls les comptes listés dans la table `admins` peuvent créer, modifier ou supprimer un arbre valide.
-
-Aucun jeton GitHub, aucune clé secrète dans le navigateur : tout passe par Supabase (clé *publishable*, publique par conception).
+Les admins peuvent ensuite **valider, modifier ou supprimer** chaque proposition directement depuis la popup de l'arbre sur la carte. Aucun jeton GitHub, aucune clé secrète dans le navigateur : tout passe par Supabase (clé *publishable*, publique par conception).
 
 ## 🚀 Activer le site
 
@@ -113,7 +111,6 @@ Structure d'une entrée :
 - `kids_friendly` : `true` si l'arbre est adapté aux enfants (affiché 👶 dans le popup)
 - `acces_pieton` : `true` si l'accès est piéton uniquement (affiché 🚶 dans le popup)
 - `ramassage` : date/heure prévue de ramassage, format `"AAAA-MM-JTHH:MM"` (p. ex. `"2026-12-15T09:30"`) — affichée 🚚 dans le popup ; **une fois la date passée, le marqueur devient grisé** (opacity réduite) et le popup affiche ✅ Ramassé
-- Sur la carte, le bouton **« ＋ Point »** copie un bloc déjà rempli avec `type` et `production`
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
 - Pour une photo : héberge-la (p. ex. dans un dossier `photos/` du dépôt) et mets son URL
 
