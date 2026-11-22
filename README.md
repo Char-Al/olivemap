@@ -24,7 +24,21 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 2. Ouvre le **SQL Editor** du projet et exécute le script [`supabase.sql`](supabase.sql) (table + règles de sécurité RLS : lecture publique des arbres `valide`, insertion publique seulement en `attente`) — le script est idempotent : le ré-exécuter applique les mises à jour de schéma (p. ex. nouvelles colonnes `kids_friendly`, `acces_pieton`)
 3. C'est tout — l'URL du projet et la clé *publishable* `sb_publishable_…` (publique par conception) sont déjà dans `index.html`
 
-**Valider une proposition :** Table Editor → table `arbres` → ligne en `attente` → changer `statut` en `valide`. La carte se met à jour au chargement suivant. Les données du GeoJSON et de Supabase sont **fusionnées** à l'affichage.
+**⏱ Date de ramassage** : réservée aux **administrateurs** — le champ est masqué dans le formulaire public et la base refuse toute insertion publique avec une date (RLS). Un admin peut la définir **au moment de la validation**.
+
+**👑 Panneau admin (bouton 👑 du site)**
+
+- Connexion par email + mot de passe (comptes Supabase Auth)
+- Voir les **demandes en attente**, définir une date de ramassage, **valider** ✅ ou **rejeter** 🗑️ en un clic
+- **Gérer les administrateurs** : ajouter un email (`＋`) ou en retirer — le premier admin doit néanmoins être inséré à la main : dans le SQL Editor, décommente la section 7 de `supabase.sql` avec ton email :
+
+```sql
+insert into public.admins (email) values ('ton.email@exemple.fr') on conflict (email) do nothing;
+```
+
+Après l'insertion, crée ton compte depuis le bouton 👑 (« Créer le compte »), connecte-toi : tu es admin. Astuce : si l'inscription exige une confirmation par email et que ça t'ennuie, désactive *Confirm email* dans Authentication → Providers.
+
+La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les demandes, ni valider, ni gérer la liste. Les données du GeoJSON et de Supabase restent **fusionnées** à l'affichage.
 
 ## ➕ Créer un arbre directement depuis le site
 

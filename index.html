@@ -219,6 +219,35 @@
       color: var(--text-dim); font-size: 12px; margin: 2px 0 6px;
       font-family: ui-monospace, monospace;
     }
+    .modal h3 { margin: 16px 0 4px; font-size: 14px; }
+    .pending-card {
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; margin: 8px 0;
+    }
+    .pending-card .p-name { font-weight: 700; font-size: 14px; }
+    .pending-card .p-meta { color: var(--text-dim); font-size: 12px; margin: 2px 0 6px; }
+    .pending-card label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+    .pending-card label input { flex: 1; }
+    .p-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .mini {
+      border: none; border-radius: 8px; padding: 6px 10px;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .mini.ok { background: var(--accent-strong); color: #fff; }
+    .mini.ok:hover { filter: brightness(1.15); }
+    .mini.no { background: #5a3a34; color: #f7c5c0; }
+    .admin-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 4px 0; font-size: 13px;
+    }
+    #add-admin-row { display: flex; gap: 8px; margin-top: 6px; }
+    #add-admin-row input { flex: 1; }
+    #add-admin-row button {
+      border: 1px solid var(--border); background: var(--panel-2);
+      color: var(--text); border-radius: 8px; padding: 8px 14px;
+      cursor: pointer; font-weight: 700;
+    }
+    #add-admin-row button:hover { border-color: var(--accent); }
 
     .state-badge {
       display: inline-block; padding: 1px 8px; border-radius: 999px;
@@ -284,6 +313,7 @@
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-key" class="btn" title="Jeton GitHub (pour créer des arbres)">🔑</button>
       <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
+      <button id="btn-admin" class="btn" title="Espace admin">👑</button>
     </div>
   </div>
 
@@ -353,8 +383,10 @@
           <input id="f-photo" type="url" placeholder="https://…/photo.jpg" />
           <label>Notes</label>
           <textarea id="f-notes" rows="2"></textarea>
-          <label>Date prévue de ramassage</label>
-          <input id="f-ramassage" type="datetime-local" />
+          <div id="ramassage-row">
+            <label>Date prévue de ramassage (admins uniquement)</label>
+            <input id="f-ramassage" type="datetime-local" />
+          </div>
           <div class="check-row"><input type="checkbox" id="f-kids" /><span>👶 Adapté aux enfants</span></div>
           <div class="check-row"><input type="checkbox" id="f-pieton" /><span>🚶 Accès piéton uniquement</span></div>
           <div class="err" id="form-err"></div>
@@ -380,7 +412,40 @@
 
       <div class="step" id="step-commit">
         <h2>🪒 Création…</h2>
+      <div class="step" id="step-commit">
+        <h2>🫒 Création…</h2>
         <p class="hint" id="commit-msg">Préparation…</p>
+      </div>
+
+      <div class="step" id="step-login">
+        <h2>👑 Espace admin</h2>
+        <p class="hint">Connecte-toi avec un compte dont l'email figure dans la liste des administrateurs.</p>
+        <label>Email</label>
+        <input id="a-email" type="email" placeholder="prenom@exemple.fr" autocomplete="username" />
+        <label>Mot de passe</label>
+        <input id="a-pass" type="password" placeholder="Mot de passe" autocomplete="current-password" />
+        <div class="err" id="login-err"></div>
+        <div class="modal-actions">
+          <button type="button" class="ghost" id="btn-signup">Créer le compte</button>
+          <button type="button" class="primary" id="btn-signin">Se connecter</button>
+        </div>
+      </div>
+
+      <div class="step" id="step-admin">
+        <h2>👑 Espace admin</h2>
+        <p class="hint" id="admin-info"></p>
+        <h3>Demandes en attente</h3>
+        <div id="pending-list"></div>
+        <h3>Administrateurs</h3>
+        <div id="admins-list"></div>
+        <div id="add-admin-row">
+          <input id="new-admin-email" type="email" placeholder="prenom@exemple.fr" />
+          <button type="button" id="btn-add-admin">+</button>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="ghost" id="btn-signout">Déconnexion</button>
+          <button type="button" class="primary" id="btn-refresh-admin">Rafraîchir</button>
+        </div>
       </div>
     </div>
   </div>
@@ -604,10 +669,11 @@
     function setFormMode(target) {
       document.getElementById('modal-title').textContent = target === 'create' ? '🫒 Nouvel arbre' : '🙋 Proposer un arbre';
       document.getElementById('btn-submit-form').textContent = target === 'create' ? "Créer l'arbre" : 'Envoyer la proposition';
+      document.getElementById('ramassage-row').style.display = target === 'create' ? '' : 'none';
     }
 
     function showStep(name) {
-      ['form', 'token', 'commit'].forEach((s) => {
+      ['form', 'token', 'commit', 'login', 'admin'].forEach((s) => {
         document.getElementById(`step-${s}`).classList.toggle('visible', s === name);
       });
       document.getElementById('modal-overlay').classList.add('visible');
@@ -631,7 +697,7 @@
       if (val('f-notes')) props.notes = val('f-notes');
       if (document.getElementById('f-kids').checked) props.kids_friendly = true;
       if (document.getElementById('f-pieton').checked) props.acces_pieton = true;
-      if (val('f-ramassage')) props.ramassage = val('f-ramassage');
+      if (addModeTarget === 'create' && val('f-ramassage')) props.ramassage = val('f-ramassage');
       return props;
     }
 
@@ -830,6 +896,156 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') hideModal();
     });
+
+    let isAdminUser = false;
+    let currentEmail = null;
+
+    async function refreshAdminState() {
+      isAdminUser = false;
+      currentEmail = null;
+      try {
+        const { data } = await sb.auth.getUser();
+        currentEmail = (data && data.user && data.user.email) || null;
+        if (currentEmail) {
+          const { data: ok, error } = await sb.rpc('is_admin');
+          if (!error && ok === true) isAdminUser = true;
+        }
+      } catch (e) { isAdminUser = false; }
+      const b = document.getElementById('btn-admin');
+      b.classList.toggle('active', isAdminUser);
+      b.title = isAdminUser ? `Espace admin (${currentEmail})` : 'Espace admin';
+      return isAdminUser;
+    }
+
+    function adminsRow(email, removable) {
+      const row = document.createElement('div');
+      row.className = 'admin-row';
+      row.innerHTML = `<span>\u{1F451} ${email}${removable ? '' : ' (toi)'}</span>${removable ? `<button class="mini no" data-e="${email}">\u{1F5D1} Effacer</button>` : ''}`;
+      if (removable) {
+        row.querySelector('button').addEventListener('click', async () => {
+          const { error } = await sb.from('admins').delete().eq('email', email);
+          if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+          toast(`\u{1F451} ${email} n'est plus administrateur.`);
+          loadAdminPanel();
+        });
+      }
+      return row;
+    }
+
+    async function loadAdminPanel() {
+      document.getElementById('admin-info').textContent =
+        `Connect\u00e9 : ${currentEmail || '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
+      const pl = document.getElementById('pending-list');
+      const al = document.getElementById('admins-list');
+      pl.innerHTML = '';
+      al.innerHTML = '';
+      if (!isAdminUser) {
+        pl.innerHTML = '<div class="hint">Ton compte n\'est pas dans la liste des administrateurs. Demande \u00e0 un admin existant de l\'ajouter.</div>';
+        return;
+      }
+      const { data: pend } = await sb.from('arbres').select('*').eq('statut', 'attente').order('cree_le');
+      if (!pend || !pend.length) {
+        pl.innerHTML = '<div class="hint">Aucune demande en attente \u{1F389}</div>';
+      } else {
+        pend.forEach((t) => {
+          const card = document.createElement('div');
+          card.className = 'pending-card';
+          card.innerHTML = `
+            <div class="p-name">${t.nom}</div>
+            <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · propos\u00e9 le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
+            <label>Date de ramassage (optionnel) <input type="datetime-local" class="p-date" /></label>
+            <div class="p-actions">
+              <button class="mini ok" data-id="${t.id}">\u2705 Valider</button>
+              <button class="mini no" data-id="${t.id}">\u{1F5D1} Rejeter</button>
+            </div>`;
+          card.querySelector('.ok').addEventListener('click', async () => {
+            const date = card.querySelector('.p-date').value;
+            const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date || null }).eq('id', t.id);
+            if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+            toast(`\u2705 \u00ab ${t.nom} \u00bb valid\u00e9${date ? ' (ramassage : ' + date + ')' : ' sans date de ramassage'}.`, false);
+            loadAdminPanel();
+            load();
+          });
+          card.querySelector('.no').addEventListener('click', async () => {
+            const { error } = await sb.from('arbres').delete().eq('id', t.id);
+            if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+            toast(`\u{1F5D1} Proposition \u00ab ${t.nom} \u00bb rejet\u00e9e.`);
+            loadAdminPanel();
+          });
+          pl.appendChild(card);
+        });
+      }
+      const { data: adms } = await sb.from('admins').select('email').order('email');
+      if (!adms || !adms.length) {
+        al.innerHTML = '<div class="hint">Aucun admin en base (ajoute-toi via SQL le premier).</div>';
+      } else {
+        adms.forEach((a) => al.appendChild(adminsRow(a.email, a.email !== currentEmail)));
+      }
+    }
+
+    function authErr(message) {
+      if (/Invalid login/i.test(message)) return 'Identifiants incorrects.';
+      if (/not confirmed/i.test(message)) return "Email non confirm\u00e9 : v\u00e9rifie ta bo\u00eete (ou d\u00e9sactive \u00ab Confirm email \u00bb dans Supabase).";
+      if (/rate/i.test(message)) return "Trop d'essais \u2014 attends un instant.";
+      return message;
+    }
+
+    function readLogin() {
+      return {
+        email: document.getElementById('a-email').value.trim(),
+        password: document.getElementById('a-pass').value,
+      };
+    }
+
+    document.getElementById('btn-admin').addEventListener('click', async () => {
+      if (!sb) { toast('\u26a0\ufe0f Supabase indisponible \u2014 recharges la page.', false); return; }
+      await refreshAdminState();
+      if (isAdminUser) { showStep('admin'); loadAdminPanel(); }
+      else { showStep('login'); }
+    });
+
+    document.getElementById('btn-signin').addEventListener('click', async () => {
+      const err = document.getElementById('login-err');
+      const creds = readLogin();
+      const { error } = await sb.auth.signInWithPassword(creds);
+      if (error) { err.textContent = authErr(error.message); err.classList.add('visible'); return; }
+      err.classList.remove('visible');
+      await refreshAdminState();
+      showStep('admin');
+      loadAdminPanel();
+    });
+
+    document.getElementById('btn-signup').addEventListener('click', async () => {
+      const err = document.getElementById('login-err');
+      const creds = readLogin();
+      const { data, error } = await sb.auth.signUp(creds);
+      if (error) { err.textContent = authErr(error.message); err.classList.add('visible'); return; }
+      err.classList.remove('visible');
+      toast(data && data.session
+        ? "\u2705 Compte cr\u00e9\u00e9 et connect\u00e9. Un admin existant doit encore l'ajouter \u00e0 la liste pour donner les droits."
+        : "\u{1F4E8} Compte cr\u00e9\u00e9 \u2014 confirme ton email, puis connecte-toi. Un admin devra ensuite l'ajouter \u00e0 la liste.", false);
+    });
+
+    document.getElementById('btn-add-admin').addEventListener('click', async () => {
+      const v = document.getElementById('new-admin-email').value.trim().toLowerCase();
+      if (!v) return;
+      const { error } = await sb.from('admins').insert({ email: v });
+      if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+      document.getElementById('new-admin-email').value = '';
+      toast(`\u{1F451} ${v} est maintenant administrateur.`);
+      loadAdminPanel();
+    });
+
+    document.getElementById('btn-signout').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      await refreshAdminState();
+      hideModal();
+      toast('\u{1F451} D\u00e9connect\u00e9.');
+    });
+
+    document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
+
+    if (sb) { refreshAdminState(); }
 
     load().catch(() => {
       toast('⚠️ Impossible de charger <code>arbres.geojson</code>. Vérifie le fichier.', false);

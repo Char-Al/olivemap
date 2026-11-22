@@ -1,6 +1,9 @@
--- Olivemap : table des arbres
--- Script idempotent : peut être ré-exécuté sans erreur (et répare les policies manquantes).
+-- Olivemap : base Supabase
+-- Script idempotent : peut être ré-exécuté sans erreur (répare policies, droits et schéma).
 
+-- ============================================================
+-- 1) Table des arbres
+-- ============================================================
 create table if not exists public.arbres (
   id uuid primary key default gen_random_uuid(),
   cree_le timestamptz not null default now(),
@@ -27,23 +30,84 @@ alter table public.arbres
   add column if not exists acces_pieton boolean not null default false,
   add column if not exists ramassage timestamptz;
 
-alter table public.arbres enable row level security;
+-- ============================================================
+-- 2) Table des administrateurs (emails autorisés)
+-- ============================================================
+create table if not exists public.admins (
+  email text primary key
+);
 
+-- ============================================================
+-- 3) Fonction is_admin() : evite la récursion RLS sur admins
+-- ============================================================
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as
+$$
+  select auth.jwt() ->> 'email' in (select email from public.admins);
+$$;
+
+-- ============================================================
+-- 4) Droits SQL (les policies RLS filtrent ensuite les lignes)
+-- ============================================================
 grant select, insert on public.arbres to anon;
 grant select, insert, update, delete on public.arbres to authenticated;
+grant select, insert, delete on public.admins to authenticated;
+grant execute on function public.is_admin() to anon, authenticated;
 
+-- ============================================================
+-- 5) Sécurité RLS — arbres
+-- ============================================================
 alter table public.arbres enable row level security;
 
 drop policy if exists "lecture publique des arbres valides" on public.arbres;
 drop policy if exists "proposition publique d'un arbre" on public.arbres;
 
-create policy "lecture publique des arbres valides"
+create policy "lecture des arbres valides ou par un admin"
   on public.arbres for select
-  using (statut = 'valide');
+  using (statut = 'valide' or public.is_admin());
 
-create policy "proposition publique d'un arbre"
+create policy "proposition publique sans date de ramassage"
   on public.arbres for insert
-  with check (statut = 'attente');
+  with check (statut = 'attente' and ramassage is null);
 
--- Vérification : ces lignes doivent lister les 2 policies
-select tablename, policyname, cmd from pg_policies where schemaname = 'public' and tablename = 'arbres';
+create policy "un admin met à jour les arbres"
+  on public.arbres for update
+  using (public.is_admin()) with check (public.is_admin());
+
+create policy "un admin supprime les arbres"
+  on public.arbres for delete
+  using (public.is_admin());
+
+-- ============================================================
+-- 6) Sécurité RLS — admins
+-- ============================================================
+alter table public.admins enable row level security;
+
+drop policy if exists "admins consultent la liste" on public.admins;
+drop policy if exists "un admin ajoute un admin" on public.admins;
+drop policy if exists "un admin retire un autre admin" on public.admins;
+
+create policy "admins consultent la liste"
+  on public.admins for select
+  using (public.is_admin());
+
+create policy "un admin ajoute un admin"
+  on public.admins for insert
+  to authenticated
+  with check (public.is_admin());
+
+create policy "un admin retire un autre admin"
+  on public.admins for delete
+  using (public.is_admin() and email <> auth.jwt() ->> 'email');
+
+-- ============================================================
+-- 7) PREMIER ADMIN — indispensable !
+-- Remplace l'email ci-dessous par le tien (celui avec lequel
+-- tu te connecteras), puis exécute.
+-- ============================================================
+-- insert into public.admins (email) values ('ton.email@exemple.fr')
+--   on conflict (email) do nothing;
+
+-- Vérification : doit lister les policies en place
+select tablename, policyname, cmd from pg_policies
+  where schemaname = 'public' and tablename in ('arbres', 'admins');
