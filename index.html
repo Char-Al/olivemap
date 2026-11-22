@@ -156,7 +156,7 @@
     .legend-toggle:not(.active) { opacity: .35; text-decoration: line-through; }
     .swatch-zone {
       display: inline-block; width: 10px; height: 10px;
-      border-radius: 50%; border: 1.5px dashed #e0c36a; margin-right: 6px;
+      border-radius: 50%; border: 2px dashed #ffb020; margin-right: 6px;
       vertical-align: middle;
     }
 
@@ -488,7 +488,7 @@
     }).addTo(map);
     const zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
       radius: ZONE.km * 1000,
-      color: '#e0c36a', weight: 1.5, dashArray: '6 6', fillOpacity: 0.03,
+      color: '#ffb020', weight: 3, dashArray: '10 8', fillOpacity: 0.05,
     }).addTo(map);
 
     const stateLabels = { 'bon': 'Bon état', 'moyen': 'Moyen', 'mauvais': 'Mauvais état' };
