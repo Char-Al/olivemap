@@ -973,12 +973,12 @@ function renderJourFilters() {
 
 async function shareMap() {
   const url = location.origin + location.pathname;
-  const text = '\U0001FADA Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective';
+  const text = '🫚 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective';
   if (navigator.share) {
     try { await navigator.share({ title: 'Olivmap', text, url }); } catch (e) { /* partage annul\u00e9 */ }
     return;
   }
-  try { await navigator.clipboard.writeText(url); toast('\U0001F517 Lien copi\u00e9 \u2014 colle-le dans ta messagerie.'); }
+  try { await navigator.clipboard.writeText(url); toast('🔗 Lien copi\u00e9 \u2014 colle-le dans ta messagerie.'); }
   catch (e) { toast(url, false); }
 }
 
@@ -1064,12 +1064,12 @@ document.getElementById('btn-share').addEventListener('click', shareMap);
 
 document.getElementById('btn-share-wa').addEventListener('click', () => {
   const url = location.origin + location.pathname;
-  const text = '\U0001FADA Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective : ' + url;
+  const text = '🫚 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective : ' + url;
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
 });
 
 document.getElementById('btn-share-copy').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(location.origin + location.pathname); toast('\U0001F517 Lien copi\u00e9.'); }
+  try { await navigator.clipboard.writeText(location.origin + location.pathname); toast('🔗 Lien copi\u00e9.'); }
   catch (e) { toast(location.origin + location.pathname, false); }
 });
 (function () {
