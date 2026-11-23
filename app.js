@@ -1032,6 +1032,14 @@ async function loadAdminPanel() {
     pend.forEach((t) => {
       const card = document.createElement('div');
       card.className = 'pending-card';
+      card.title = 'Voir cet arbre sur la carte';
+      card.addEventListener('click', (ev) => {
+        if (ev.target.closest('button')) return;
+        hideModal();
+        dayFilter = null;
+        render();
+        openTreeById(t.id);
+      });
       card.innerHTML = `
         <div class="p-name">${esc(t.nom)}</div>
         <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · propos\u00e9 le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
