@@ -254,7 +254,6 @@ function render() {
     markers.push({ marker, f });
     marker.addTo(map);
   });
-  document.getElementById('counter').innerHTML = `<b>${feats.length}</b>/${allFeatures.length}`;
   const lp = document.getElementById('legend-poi');
   if (lp) {
     lp.style.display = poiMarkers.length ? '' : 'none';

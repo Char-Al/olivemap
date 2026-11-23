@@ -62,9 +62,6 @@ html, body {
 .btn.active { background: var(--accent-strong); border-color: var(--accent); color: #fff; }
 
 /* ---- Compteur ---- */
-.legend .counter { font-variant-numeric: tabular-nums; }
-.counter { font-size: 11px; color: var(--text-dim); }
-.counter b { color: var(--accent); font-size: 12px; }
 
 /* ---- Aide "nouveau point" ---- */
 .add-badge {
