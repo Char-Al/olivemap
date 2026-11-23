@@ -450,3 +450,5 @@ html, body {
 .legend-body { display: contents; }
 .popup-details summary { cursor: pointer; user-select: none; color: var(--accent); font-size: 12px; }
 .popup-details dl { margin-top: 6px; }
+.part-me { font-size: 11px; color: var(--text-dim); align-self: center; }
+.part-form.part-me-row { justify-content: space-between; }
