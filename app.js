@@ -1035,6 +1035,16 @@ document.getElementById('widgets-toggle').addEventListener('click', () => {
 
 setWidgetsVisible(localStorage.getItem('olivemap_widgets') !== '0');
 setLegendFolded(localStorage.getItem('olivemap_legend') === '1');
+(function () {
+  const ic = document.getElementById('intro-card');
+  if (!ic || localStorage.getItem('olivemap_intro') === '1') return;
+  ic.style.display = '';
+  document.getElementById('btn-intro-ok').addEventListener('click', () => {
+    ic.style.display = 'none';
+    localStorage.setItem('olivemap_intro', '1');
+  });
+})();
+
 
 function setLegendFolded(v) {
   const body = document.getElementById('legend-body');
