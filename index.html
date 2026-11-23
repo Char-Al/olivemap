@@ -41,6 +41,7 @@
   </div>
   <div class="add-badge" id="add-badge">Cliquez sur la carte pour choisir l'emplacement — annuler</div>
   <div class="toast" id="toast"></div>
+  <div id="print-sheet" style="display:none"></div>
 
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
@@ -173,6 +174,13 @@
             </div>
           </div>
           <button type="button" class="mini ok" id="btn-save-info">📢 Enregistrer l'annonce</button>
+        </div>
+        <div id="sheet-admin" style="display:none">
+          <label>Feuille d'équipe (impression)</label>
+          <div class="modal-actions" style="margin-top:6px">
+            <button type="button" class="mini edit" id="btn-sheet1">🖨️ Jour 1</button>
+            <button type="button" class="mini edit" id="btn-sheet2">🖨️ Jour 2</button>
+          </div>
         </div>
         <h3>Demandes en attente</h3>
         <div id="pending-list"></div>

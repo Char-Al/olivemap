@@ -40,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v28`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v29`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -130,6 +130,10 @@ La récolte s'organise sur **deux journées** ; chaque arbre est rattaché (ou n
 - **Matériel par arbre** : les cochent 🪜 Échelle / 🧺 Caisses / 🪮 Râteau / 🥅 Bâche ou filet nécessaires dans la fenêtre admin d'un arbre → affichés dans le popup.
 - **J'apporte** : dans *Je viens*, le volontaire coche ce qu'il apporte (🪜 échelle, 🧺 caisses, 🪮 râteau, 🥅 bâche ou filet — plusieurs choix possibles) ; visible dans la liste des participants (suppression par les admins).
 - **Partage** : bouton 🔗 Partager l'arbre dans le popup → lien direct `?arbre=<id>` qui ouvre la carte centrée sur l'arbre ; bouton 🧭 Itinéraire → navigation Google Maps.
+- **Points logistiques** : les admins ajoutent via 🙋 *Proposer* un point d'eau, WC, parking, accueil ou pesée (champ *Point logistique*) → pastille emoji 📍 sur la carte, toujours visible.
+- **Suivi d'avancement** : dans le popup admin, ✔️ Ramassé / ↩️ À faire fait tourner les compteurs des boutons Jour (4/7) ; les arbres faits ont un anneau vert.
+- **Dates de la cueillette** : dans le panneau admin, *Date Jour 1* / *Date Jour 2* — le jour J, le filtre correspondant s'active tout seul (📢 toast).
+- **Feuille d'équipe imprimable** : 🖨️ Jour 1 / 🖨️ Jour 2 dans le panneau admin → liste imprimable des arbres, matériel et volontaires, avec cases à cocher papier.
 
 ## 🗺️ Changer la zone par défaut
 

@@ -789,6 +789,7 @@ async function loadAdminPanel() {
     `Connect\u00e9 : ${currentEmail ? pseudoOf(currentEmail) : '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
   const evAdm = document.getElementById('event-admin');
   evAdm.style.display = isAdminUser ? '' : 'none';
+  document.getElementById('sheet-admin').style.display = isAdminUser ? '' : 'none';
   if (isAdminUser) {
     const et = document.getElementById('event-text');
     const { data: infoRows } = await sb.from('infos').select('cle, valeur').in('cle', ['rdv', 'jour1', 'jour2']);
@@ -956,6 +957,37 @@ document.getElementById('btn-signout').addEventListener('click', async () => {
   await load();
 });
 
+async function printSheet(day) {
+  const trees = allFeatures.map((f) => f.properties || {}).filter((p) => p.id && p.statut === 'valide' && p.jour === day);
+  const parts = {};
+  if (sb && trees.length) {
+    const { data } = await sb.from('participations').select('arbre_id, pseudo, nb_personnes, apporte');
+    (data || []).forEach((r) => { (parts[r.arbre_id] = parts[r.arbre_id] || []).push(r); });
+  }
+  const matLbl = { besoin_echelle: '🪜 échelle', besoin_caisses: '🧺 caisses', besoin_rateau: '🪮 râteau', besoin_bache: '🥅 bâche ou filet' };
+  const dateTxt = harvestDates[day] ? new Date(harvestDates[day] + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+  const el = document.getElementById('print-sheet');
+  el.innerHTML =
+    `<h1>🫒 Cueillette collective — Jour ${day}${dateTxt ? ` — ${dateTxt}` : ''}</h1>` +
+    (!trees.length ? '<p>Aucun arbre associé à ce jour.</p>'
+      : trees.map((p) => {
+          const mats = Object.keys(matLbl).filter((k) => p[k]).map((k) => matLbl[k]).join(', ') || '—';
+          const vols = (parts[p.id] || []).map((r) => {
+            const ap = String(r.apporte || '').split(',').map((t) => APPORT_LABELS[t.trim()] || '').filter(Boolean).join('+');
+            return `${esc(r.pseudo)} (${r.nb_personnes || 1}${ap ? ` — ${ap}` : ''})`;
+          }).join(', ') || '—';
+          return `<section class="ps-tree">
+            <h2>${esc(p.nom)} <small>· ${OWNER_LABELS[p.type] || ''}${p.hauteur_m ? ` · ${p.hauteur_m} m` : ''}</small></h2>
+            <p><b>Matériel à apporter :</b> ${mats}</p>
+            <p><b>Volontaires :</b> ${vols}</p>
+            <p class="ps-check">☐ présents    ☐ ramassé  —  notes : ______________________________</p>
+          </section>`;
+        }).join(''));
+  el.style.display = 'block';
+  window.print();
+  el.style.display = 'none';
+}
+
 document.getElementById('btn-save-info').addEventListener('click', async () => {
   if (!isAdminUser) { toast('\u26D4 R\u00e9serv\u00e9 aux administrateurs.', false); return; }
   const v = document.getElementById('event-text').value.trim();
@@ -971,6 +1003,9 @@ document.getElementById('btn-save-info').addEventListener('click', async () => {
   loadEventBanner();
   toast(v ? '📢 Annonce enregistr\u00e9e.' : '🗑 Annonce effac\u00e9e.');
 });
+
+document.getElementById('btn-sheet1').addEventListener('click', () => printSheet(1));
+document.getElementById('btn-sheet2').addEventListener('click', () => printSheet(2));
 
 document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
 

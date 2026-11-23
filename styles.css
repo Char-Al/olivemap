@@ -316,6 +316,21 @@ html, body {
   border: 2px solid #b7a68a;
   box-shadow: 0 2px 6px rgba(0,0,0,.4);
 }
+#print-sheet h1 { font-size: 20px; margin: 0 0 14px; }
+#print-sheet section { margin-bottom: 12px; }
+#print-sheet section h2 { font-size: 15px; margin: 0 0 4px; }
+#print-sheet section p { margin: 2px 0; }
+@media print {
+  body > *:not(#print-sheet) { display: none !important; }
+  #print-sheet {
+    display: block !important;
+    position: static;
+    background: #fff; color: #111; font-size: 13px; padding: 12px;
+  }
+  #print-sheet h2 small { font-weight: 400; color: #555; }
+  .ps-tree { page-break-inside: avoid; border: 1px solid #999; border-radius: 8px; padding: 8px 10px; }
+  .ps-check { color: #444; }
+}
 .event-banner {
   position: absolute; top: 64px; left: 12px;
   z-index: 1100;
