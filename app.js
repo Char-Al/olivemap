@@ -153,7 +153,7 @@ function popupHtml(props, coords) {
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
     ${props.notes ? `<div class="notes">${esc(props.notes)}</div>` : ''}
-    ${!isAdminUser && tech.length ? `<details class="popup-details"><summary>\u2139\ufe0f D\u00e9tails</summary><dl>${tech.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></details>` : ''}
+    ${!isAdminUser && tech.length ? `<details class="popup-details"><summary>\u2139\ufe0f Détails</summary><dl>${tech.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></details>` : ''}
     ${props.id && props.statut !== 'attente' && props.jour ? '<div class="part-zone" data-part></div>' : ''}
     ${actPending ? `
       <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
@@ -196,11 +196,11 @@ function render() {
           if (kind === 'ok') {
             const { error } = await sb.from('arbres').update({ statut: 'valide' }).eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-            toast(`\u2705 \u00ab ${esc(f.properties.nom)} \u00bb valid\u00e9 \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
+            toast(`\u2705 « ${esc(f.properties.nom)} » validé \u2014 il appara\u00eet désormais pour tout le monde.`);
           } else {
             const { error } = await sb.from('arbres').delete().eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-            toast(`\u{1F5D1} Proposition \u00ab ${esc(f.properties.nom)} \u00bb rejet\u00e9e.`);
+            toast(`\u{1F5D1} Proposition « ${esc(f.properties.nom)} » rejetée.`);
           }
           marker.closePopup();
           if (typeof loadAdminPanel === 'function' && isAdminUser) loadAdminPanel();
@@ -245,7 +245,7 @@ function render() {
         if (sh) sh.addEventListener('click', () => {
           const link = `${location.origin}${location.pathname}?arbre=${f.properties.id}`;
           navigator.clipboard.writeText(link)
-            .then(() => toast('🔗 Lien copi\u00e9 \u2014 colle-le pour partager cet arbre.'))
+            .then(() => toast('🔗 Lien copié \u2014 colle-le pour partager cet arbre.'))
             .catch(() => toast(link, false));
         });
       });
@@ -434,7 +434,7 @@ async function loadPois() {
         const { error } = await sb.from('pois').delete().eq('id', p.id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
         m.closePopup();
-        toast(`🗑 ${esc((POI[p.type] || {}).label || 'Point')} supprim\u00e9.`);
+        toast(`🗑 ${esc((POI[p.type] || {}).label || 'Point')} supprimé.`);
         loadPois();
         loadPoisAdmin();
       });
@@ -463,7 +463,7 @@ async function loadPoisAdmin() {
     b.addEventListener('click', async () => {
       const { error: err } = await sb.from('pois').delete().eq('id', b.dataset.pdel);
       if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
-      toast('🗑 Point logistique supprim\u00e9.');
+      toast('🗑 Point logistique supprimé.');
       loadPoisAdmin();
       loadPois();
     });
@@ -727,7 +727,7 @@ async function photoToBlob(file) {
 }
 
 document.getElementById('btn-photo').addEventListener('click', () => {
-  if (addModeTarget === 'propose') { toast('\u26a0\ufe0f Pour une proposition, colle simplement une URL de photo (l\'envoi de fichier est r\u00e9serv\u00e9 aux admins).', false); return; }
+  if (addModeTarget === 'propose') { toast('\u26a0\ufe0f Pour une proposition, colle simplement une URL de photo (l\'envoi de fichier est réservé aux admins).', false); return; }
   document.getElementById('f-photo-file').click();
 });
 
@@ -832,11 +832,11 @@ async function loadParticipations(id, zone, jour) {
     ${list ? `<div class="part-list">${list}</div>` : ''}
     ${mine ? `
     <div class="part-form part-me-row">
-      <span class="part-me">\u2705 Inscrit via \u00ab ${esc(me)} \u00bb</span>
+      <span class="part-me">\u2705 Inscrit via « ${esc(me)} »</span>
       <button type="button" class="mini no" data-part-cancel>\u21a9\ufe0f Je ne viens plus</button>
     </div>` : `
     <div class="part-form">
-      ${me ? `<span class="part-me">via \u00ab ${esc(me)} \u00bb</span>` : `<input data-part-pseudo placeholder="ton pseudo" />`}
+      ${me ? `<span class="part-me">via « ${esc(me)} »</span>` : `<input data-part-pseudo placeholder="ton pseudo" />`}
       <input data-part-nb type="number" min="1" max="50" value="${savedNb}" />
       <button type="button" class="mini ok" data-part-go>\ud83d\ude4b Je viens</button>
     </div>`}
@@ -876,7 +876,7 @@ async function loadParticipations(id, zone, jour) {
   if (cancel) cancel.addEventListener('click', async () => {
     const { error: err } = await sb.from('participations').delete().eq('id', mine.id);
     if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
-    toast('\u274c Participation annul\u00e9e.');
+    toast('\u274c Participation annulée.');
     loadParticipations(id, zone, jour);
     loadJourSummary();
   });
@@ -977,10 +977,10 @@ async function shareMap() {
   const url = location.origin + location.pathname;
   const text = '🫚 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective';
   if (navigator.share) {
-    try { await navigator.share({ title: 'Olivmap', text, url }); } catch (e) { /* partage annul\u00e9 */ }
+    try { await navigator.share({ title: 'Olivmap', text, url }); } catch (e) { /* partage annulé */ }
     return;
   }
-  try { await navigator.clipboard.writeText(url); toast('🔗 Lien copi\u00e9 \u2014 colle-le dans ta messagerie.'); }
+  try { await navigator.clipboard.writeText(url); toast('🔗 Lien copié \u2014 colle-le dans ta messagerie.'); }
   catch (e) { toast(url, false); }
 }
 
@@ -1103,7 +1103,7 @@ function setWidgetsVisible(v) {
   if (!inner || !btn) return;
   inner.style.display = v ? 'flex' : 'none';
   btn.textContent = v ? '\u2715' : '🗓 ⛅';
-  btn.title = v ? 'Masquer la m\u00e9t\u00e9o et le r\u00e9sum\u00e9 des jours' : 'Afficher la m\u00e9t\u00e9o et le r\u00e9sum\u00e9 des jours';
+  btn.title = v ? 'Masquer la météo et le résumé des jours' : 'Afficher la météo et le résumé des jours';
   localStorage.setItem('olivemap_widgets', v ? '1' : '0');
 }
 
@@ -1128,7 +1128,7 @@ document.getElementById('btn-list').addEventListener('click', () => {
 });
 
 document.getElementById('btn-share-copy').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(location.origin + location.pathname); toast('🔗 Lien copi\u00e9.'); }
+  try { await navigator.clipboard.writeText(location.origin + location.pathname); toast('🔗 Lien copié.'); }
   catch (e) { toast(location.origin + location.pathname, false); }
 });
 (function () {
@@ -1148,7 +1148,7 @@ function setLegendFolded(v) {
   if (!body || !btn) return;
   body.style.display = v ? 'none' : 'contents';
   btn.textContent = v ? '\u203a' : '\u2039';
-  btn.title = v ? 'D\u00e9plier la l\u00e9gende' : 'Replier la l\u00e9gende';
+  btn.title = v ? 'Déplier la légende' : 'Replier la légende';
   localStorage.setItem('olivemap_legend', v ? '1' : '0');
 }
 
@@ -1247,7 +1247,7 @@ async function loadEventBanner() {
 
 async function loadAdminPanel() {
   document.getElementById('admin-info').textContent =
-    `Connect\u00e9 : ${currentEmail ? pseudoOf(currentEmail) : '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
+    `Connecté : ${currentEmail ? pseudoOf(currentEmail) : '\u2014'}${isAdminUser ? '' : " \u2014 ton compte n'est pas administrateur"}`;
   const evAdm = document.getElementById('event-admin');
   evAdm.style.display = isAdminUser ? '' : 'none';
   document.getElementById('sheet-admin').style.display = isAdminUser ? '' : 'none';
@@ -1294,7 +1294,7 @@ async function loadAdminPanel() {
       });
       card.innerHTML = `
         <div class="p-name">${esc(t.nom)}</div>
-        <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · propos\u00e9 le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
+        <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · proposé le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
         <div class="p-actions">
           <button class="mini ok" data-id="${t.id}">\u2705 Valider</button>
           <button class="mini no" data-id="${t.id}">\u{1F5D1} Rejeter</button>
@@ -1302,14 +1302,14 @@ async function loadAdminPanel() {
       card.querySelector('.ok').addEventListener('click', async () => {
         const { error } = await sb.from('arbres').update({ statut: 'valide' }).eq('id', t.id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u2705 \u00ab ${esc(t.nom)} \u00bb valid\u00e9 \u2014 il appara\u00eet d\u00e9sormais pour tout le monde..`, false);
+        toast(`\u2705 « ${esc(t.nom)} » validé \u2014 il appara\u00eet désormais pour tout le monde..`, false);
         loadAdminPanel();
         load();
       });
       card.querySelector('.no').addEventListener('click', async () => {
         const { error } = await sb.from('arbres').delete().eq('id', t.id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u{1F5D1} Proposition \u00ab ${esc(t.nom)} \u00bb rejet\u00e9e.`);
+        toast(`\u{1F5D1} Proposition « ${esc(t.nom)} » rejetée.`);
         loadAdminPanel();
       });
       pl.appendChild(card);
@@ -1331,7 +1331,7 @@ async function loadAdminPanel() {
         <td>${esc(t.espece || '\u2014')}</td>
         <td>${t.jour ? dayEmoji(t.jour) + ' Jour ' + t.jour : '\u2014'}</td>
         <td>${t.statut === 'valide' ? '\u2705' : '\u23f3'}</td>
-        <td><button type="button" class="mini edit" data-td="toggle">${t.statut === 'valide' ? '\u23f3 D\u00e9valider' : '\u2705 Valider'}</button> <button type="button" class="mini no" data-td="del">\u{0001F5D1}</button></td>
+        <td><button type="button" class="mini edit" data-td="toggle">${t.statut === 'valide' ? '\u23f3 Dévalider' : '\u2705 Valider'}</button> <button type="button" class="mini no" data-td="del">\u{0001F5D1}</button></td>
       </tr>`).join('') + '</tbody>';
     at.innerHTML = '';
     at.appendChild(tbl);
@@ -1342,15 +1342,15 @@ async function loadAdminPanel() {
         const ns = row.statut === 'valide' ? 'attente' : 'valide';
         const { error } = await sb.from('arbres').update({ statut: ns }).eq('id', id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`${ns === 'valide' ? '\u2705' : '\u23f3'} \u00ab ${esc(row.nom)} \u00bb \u2192 ${ns}.`);
+        toast(`${ns === 'valide' ? '\u2705' : '\u23f3'} « ${esc(row.nom)} » → ${ns}.`);
         loadAdminPanel();
         load();
       });
       tr.querySelector('[data-td="del"]').addEventListener('click', async () => {
-        if (!confirm(`Supprimer \u00ab ${esc(row.nom)} \u00bb ?`)) return;
+        if (!confirm(`Supprimer « ${esc(row.nom)} » ?`)) return;
         const { error } = await sb.from('arbres').delete().eq('id', id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u{0001F5D1} \u00ab ${esc(row.nom)} \u00bb supprim\u00e9.`);
+        toast(`\u{0001F5D1} « ${esc(row.nom)} » supprimé.`);
         loadAdminPanel();
         load();
       });
@@ -1368,7 +1368,7 @@ async function loadAdminPanel() {
 
 function authErr(message) {
   if (/Invalid login/i.test(message)) return 'Identifiants incorrects.';
-  if (/not confirmed/i.test(message)) return "Email non confirm\u00e9 : v\u00e9rifie ta bo\u00eete (ou d\u00e9sactive \u00ab Confirm email \u00bb dans Supabase).";
+  if (/not confirmed/i.test(message)) return "Email non confirmé : vérifie ta bo\u00eete (ou désactive « Confirm email » dans Supabase).";
   if (/rate/i.test(message)) return "Trop d'essais \u2014 attends un instant.";
   return message;
 }
@@ -1427,7 +1427,7 @@ document.getElementById('btn-signout').addEventListener('click', async () => {
   await sb.auth.signOut();
   await refreshAdminState();
   hideModal();
-  toast('\u{1F451} D\u00e9connect\u00e9.');
+  toast('\u{1F451} Déconnecté.');
   await load();
 });
 
@@ -1464,7 +1464,7 @@ async function printSheet(day) {
 }
 
 document.getElementById('btn-save-info').addEventListener('click', async () => {
-  if (!isAdminUser) { toast('\u26D4 R\u00e9serv\u00e9 aux administrateurs.', false); return; }
+  if (!isAdminUser) { toast('\u26D4 Réservé aux administrateurs.', false); return; }
   const v = document.getElementById('event-text').value.trim();
   const now = new Date().toISOString();
   const { error: eInf } = await sb.from('infos').upsert([{ cle: 'rdv', valeur: v, maj_le: now }], { onConflict: 'cle' });
@@ -1518,7 +1518,7 @@ document.getElementById('btn-save-info').addEventListener('click', async () => {
   renderJourFilters();
   renderSheetButtons();
   render();
-  toast('📢 Annonce et jours enregistr\u00e9s.');
+  toast('📢 Annonce et jours enregistrés.');
 });
 
 document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
@@ -1527,7 +1527,7 @@ const bootAdmin = sb ? refreshAdminState() : Promise.resolve();
 
 function openTreeById(id) {
   const hit = markers.find((m) => m.f && m.f.properties && m.f.properties.id === id);
-  if (!hit) { toast('\u26a0\ufe0f Arbre introuvable (ou pas encore valid\u00e9).', false); return; }
+  if (!hit) { toast('\u26a0\ufe0f Arbre introuvable (ou pas encore validé).', false); return; }
   const c = hit.f.geometry.coordinates;
   map.panTo([c[1], c[0]], { animate: false });
   hit.marker.openPopup();
@@ -1563,15 +1563,15 @@ btnInstall.addEventListener('click', async () => {
   if (deferredInstall) {
     deferredInstall.prompt();
     const { outcome } = await deferredInstall.userChoice;
-    if (outcome === 'accepted') toast('\U0001F4F2 Olivemap install\u00e9 !');
+    if (outcome === 'accepted') toast('📲 Olivemap installé !');
     deferredInstall = null;
     btnInstall.style.display = 'none';
     return;
   }
   if (isIos) {
-    toast('\U0001F4F2 Sur iPhone, l\u2019installation passe par Safari : ouvre Olivemap dans <strong>Safari</strong>, touche \u2b06\ufe0f <strong>Partager</strong> puis \u00ab Sur l\u2019\u00e9cran d\u2019accueil \u00bb.', true);
+    toast('📲 Sur iPhone, l’installation passe par Safari : ouvre Olivemap dans <strong>Safari</strong>, touche ⬆️ <strong>Partager</strong> puis « Sur l’écran d’accueil ».', true);
   } else {
-    toast('\U0001F4F2 Ce navigateur (par ex. DuckDuckGo) ne permet pas d\u2019installer l\u2019appli. Ouvre Olivemap dans <strong>Chrome</strong> : menu \u22ee \u2192 \u00ab Installer l\u2019application \u00bb.', true);
+    toast('📲 Ce navigateur (par ex. DuckDuckGo) ne permet pas d’installer l’appli. Ouvre Olivemap dans <strong>Chrome</strong> : menu ⋮ → « Installer l’application ».', true);
   }
 });
 
