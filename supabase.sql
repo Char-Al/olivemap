@@ -287,9 +287,9 @@ insert into public.jours (numero)
   select s.n from unnest(array[1, 2]) as s(n)
   on conflict (numero) do nothing;
 
-update public.jours set date = nullif((select valeur from public.infos where cle = 'jour1'), '')
+update public.jours set date = nullif((select valeur from public.infos where cle = 'jour1'), '')::date
   where numero = 1 and date is null;
-update public.jours set date = nullif((select valeur from public.infos where cle = 'jour2'), '')
+update public.jours set date = nullif((select valeur from public.infos where cle = 'jour2'), '')::date
   where numero = 2 and date is null;
 
 -- La date ne vit plus sur l'arbre :
