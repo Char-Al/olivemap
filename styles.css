@@ -308,8 +308,6 @@ html, body {
 
 /* ---- Toast ---- */
 .weather {
-  position: absolute; left: 12px; bottom: 58px;
-  z-index: 1000;
   background: rgba(23, 29, 25, .78);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(43, 54, 46, .8);
@@ -412,8 +410,6 @@ html, body {
 .pending-card { cursor: pointer; }
 .pending-card:hover { border-color: var(--accent); }
 .jours-summary {
-  position: absolute; left: 12px; bottom: 104px;
-  z-index: 1000;
   background: rgba(23, 29, 25, .78);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(43, 54, 46, .8);
@@ -428,3 +424,20 @@ html, body {
 .jours-summary .js-row:hover { background: rgba(43, 54, 46, .5); }
 .jours-summary .js-row.active { background: var(--panel-2); color: var(--text); }
 .jours-summary .js-lack { color: #ffd98a; }
+.overlay-widgets {
+  position: absolute; left: 12px; bottom: 58px;
+  z-index: 1000;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  max-width: calc(100vw - 24px);
+}
+.overlay-widgets-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.widgets-toggle {
+  cursor: pointer; user-select: none;
+  background: rgba(23, 29, 25, .78);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(43, 54, 46, .8);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px; color: var(--text-dim);
+}
+.widgets-toggle:hover { filter: brightness(1.15); }
