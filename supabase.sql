@@ -186,9 +186,7 @@ alter table public.arbres
   add column if not exists besoin_caisses boolean,
   add column if not exists besoin_rateau boolean,
   add column if not exists besoin_bache boolean,
-  add column if not exists poi text,
   add column if not exists ramasse boolean;
-
 create table if not exists public.infos (
   id uuid primary key default gen_random_uuid(),
   cle text unique not null,
@@ -212,3 +210,33 @@ grant select on public.infos to anon, authenticated;
 grant insert, update, delete on public.infos to authenticated;
 
 alter table public.participations add column if not exists apporte text;
+
+-- ============================================================
+-- 11) POINTS LOGISTIQUES DÉDIÉS : table « pois » séparée
+--     (lecture publique, écriture réservée aux admins)
+-- ============================================================
+create table if not exists public.pois (
+  id uuid primary key default gen_random_uuid(),
+  type text not null,
+  lng double precision not null,
+  lat double precision not null,
+  cree_le timestamptz not null default now()
+);
+alter table public.pois enable row level security;
+
+drop policy if exists "lecture publique des pois" on public.pois;
+create policy "lecture publique des pois"
+  on public.pois for select
+  using (true);
+
+drop policy if exists "admins gèrent les pois" on public.pois;
+create policy "admins gèrent les pois"
+  on public.pois for all
+  to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+grant select on public.pois to anon, authenticated;
+grant insert, update, delete on public.pois to authenticated;
+
+-- Les points logistiques ne vivent plus dans la table arbres :
+alter table public.arbres drop column if exists poi;
