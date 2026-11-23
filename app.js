@@ -821,20 +821,29 @@ async function loadParticipations(id, zone, jour) {
     return `<div class="part-row">· <b>${esc(r.pseudo)}</b> (${r.nb_personnes})${ap ? ` — ${ap}` : ''}${del}</div>`;
   }).join('');
   const me = localStorage.getItem('olivemap_pseudo') || '';
+  const mine = me ? (data || []).find((r) => String(r.pseudo || '').toLowerCase() === String(me).toLowerCase()) : null;
+  const savedAps = String(localStorage.getItem('olivemap_apporte') || '').split(',').filter(Boolean);
+  const savedNb = parseInt(localStorage.getItem('olivemap_nb'), 10) || 1;
+  const apChecked = (v) => (savedAps.includes(v) ? 'checked' : '');
   zone.innerHTML = `
     <div class="part-head">👥 ${total} participant${total > 1 ? 's' : ''}${jourTxt}</div>
     ${list ? `<div class="part-list">${list}</div>` : ''}
+    ${mine ? `
+    <div class="part-form part-me-row">
+      <span class="part-me">\u2705 Inscrit via \u00ab ${esc(me)} \u00bb</span>
+      <button type="button" class="mini no" data-part-cancel>\u21a9\ufe0f Je ne viens plus</button>
+    </div>` : `
     <div class="part-form">
-      <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
-      <input data-part-nb type="number" min="1" max="50" value="1" />
-      <button type="button" class="mini ok" data-part-go>🙋 Je viens</button>
-    </div>
+      ${me ? `<span class="part-me">via \u00ab ${esc(me)} \u00bb</span>` : `<input data-part-pseudo placeholder="ton pseudo" />`}
+      <input data-part-nb type="number" min="1" max="50" value="${savedNb}" />
+      <button type="button" class="mini ok" data-part-go>\ud83d\ude4b Je viens</button>
+    </div>`}
     <div class="part-apports">
       <span>J'apporte :</span>
-      <label><input type="checkbox" data-ap value="echelle" />🪜</label>
-      <label><input type="checkbox" data-ap value="caisses" />🧺</label>
-      <label><input type="checkbox" data-ap value="rateau" />🪮</label>
-      <label><input type="checkbox" data-ap value="bache" title="bâche ou filet" />🥅</label>
+      <label><input type="checkbox" data-ap value="echelle" ${apChecked('echelle')} />\ud83e\ude9c</label>
+      <label><input type="checkbox" data-ap value="caisses" ${apChecked('caisses')} />\ud83e\uddfa</label>
+      <label><input type="checkbox" data-ap value="rateau" ${apChecked('rateau')} />\ud83e\udeae</label>
+      <label><input type="checkbox" data-ap value="bache" title="b\u00e2che ou filet" ${apChecked('bache')} />\ud83e\udd45</label>
     </div>`;
   zone.querySelectorAll('[data-pid]').forEach((b) => {
     b.addEventListener('click', async () => {
@@ -846,15 +855,26 @@ async function loadParticipations(id, zone, jour) {
     });
   });
   const go = zone.querySelector('[data-part-go]');
-  go.addEventListener('click', async () => {
-    const pseudo = zone.querySelector('[data-part-pseudo]').value.trim().toLowerCase();
+  if (go) go.addEventListener('click', async () => {
+    const pi = zone.querySelector('[data-part-pseudo]');
+    const pseudo = (pi ? pi.value : me).trim().toLowerCase();
+    if (!pseudo) { toast('\u26a0\ufe0f Indique un pseudo.', false); return; }
     const nb = parseInt(zone.querySelector('[data-part-nb]').value, 10) || 1;
     const ap = Array.from(zone.querySelectorAll('[data-ap]:checked')).map((c) => c.value).join(',');
-    if (!pseudo) { toast('⚠️ Indique un pseudo.', false); return; }
+    localStorage.setItem('olivemap_apporte', ap);
+    localStorage.setItem('olivemap_nb', String(nb));
     const { error: err } = await sb.from('participations').insert({ arbre_id: id, pseudo, nb_personnes: nb, apporte: ap || null });
-    if (err) { toast('⚠️ ' + err.message, false); return; }
+    if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
     localStorage.setItem('olivemap_pseudo', pseudo);
-    toast(`🙋 ${pseudo} · ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
+    toast(`\ud83d\ude4b ${pseudo} \u00b7 ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
+    loadParticipations(id, zone, jour);
+    loadJourSummary();
+  });
+  const cancel = zone.querySelector('[data-part-cancel]');
+  if (cancel) cancel.addEventListener('click', async () => {
+    const { error: err } = await sb.from('participations').delete().eq('id', mine.id);
+    if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
+    toast('\u274c Participation annul\u00e9e.');
     loadParticipations(id, zone, jour);
     loadJourSummary();
   });
