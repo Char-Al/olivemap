@@ -49,16 +49,6 @@ function oliveGlyphs(prod) {
 }
 
 function markerIcon(props, past) {
-  if (props.poi) {
-    const info = POI[props.poi] || { emoji: '📍' };
-    return L.divIcon({
-      className: 'tree-marker',
-      html: `<div class="poi-pin">${info.emoji}</div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
-    });
-  }
   const color = OWNER_COLORS[props.type] || '#7fb069';
   const pending = props.statut === 'attente';
   const prod = Math.min(Math.max(parseInt(props.production, 10) || 1, 1), 3);
@@ -104,7 +94,6 @@ function popupHtml(props, coords) {
       `${props.production ? productionDots(props.production) : ''}`,
     ]);
   }
-  if (props.poi && POI[props.poi]) rows.push(['Fonction', POI[props.poi].label]);
   if (props.hauteur_m) rows.push(['Hauteur', `${props.hauteur_m} m`]);
   if (props.circonference_cm) rows.push(['Circonférence', `${props.circonference_cm} cm`]);
   if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
@@ -132,12 +121,12 @@ function popupHtml(props, coords) {
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
-    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache', 'poi'].includes(k) && v != null && v !== '') {
+    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'].includes(k) && v != null && v !== '') {
       rows.push([esc(k), esc(String(v))]);
     }
   }
   return `<div class="popup">
-    <h3>${props.poi ? ((POI[props.poi] || {}).emoji || '📍') : (props.emoji ? esc(props.emoji) : (actPending ? '⏳' : '🫒'))} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
+    <h3>${props.emoji ? esc(props.emoji) : (actPending ? '⏳' : '🫒')} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
     ${props.espece ? `<div class="species">${esc(props.espece)}</div>` : ''}
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
@@ -162,8 +151,8 @@ function visibleFeatures() {
     const p = f.properties || {};
     if (p.type === 'mairie' && !showM) return false;
     if (p.type === 'particulier' && !showP) return false;
-    if (j1 && !p.poi && p.jour !== 1) return false;
-    if (j2 && !p.poi && p.jour !== 2) return false;
+    if (j1 && p.jour !== 1) return false;
+    if (j2 && p.jour !== 2) return false;
     if (op) {
       if (p.statut === 'attente') return false;
       if (p.ramassage && new Date(p.ramassage) < now) return false;
@@ -269,7 +258,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache', 'poi'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -352,14 +341,118 @@ function toggleAdd(on) {
 }
 let addModeTarget = 'propose';
 const btnPropose = document.getElementById('btn-propose');
-btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; toggleAdd(); });
-addBadge.addEventListener('click', () => toggleAdd(false));
+btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; addBadge.textContent = "Cliquez sur la carte pour choisir l'emplacement \u2014 annuler"; toggleAdd(); });
+addBadge.addEventListener('click', () => {
+  if (placingPoi) {
+    placingPoi = false;
+    addBadge.classList.remove('visible');
+    document.getElementById('map').style.cursor = '';
+    return;
+  }
+  toggleAdd(false);
+});
+
+let poiMarkers = [];
+let placingPoi = false;
+let poiType = 'eau';
+
+function fillPoiType() {
+  const sel = document.getElementById('poi-type');
+  if (!sel || sel.options.length) return;
+  sel.innerHTML = Object.entries(POI).map(([k, v]) => `<option value="${k}">${v.emoji} ${esc(v.label)}</option>`).join('');
+}
+
+function poiIcon(p) {
+  const info = POI[p.type] || { emoji: '📍' };
+  return L.divIcon({
+    className: 'tree-marker',
+    html: `<div class="poi-pin">${info.emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+  });
+}
+
+function poiPopupHtml(p) {
+  const info = POI[p.type] || { emoji: '📍', label: p.type };
+  return `<div class="popup">
+    <h3>${info.emoji} ${esc(info.label)}</h3>
+    <dl><dt>Type</dt><dd>Point logistique</dd></dl>
+    ${isAdminUser && p.id ? `<div class="popup-actions"><button class="mini no" data-pdel="${p.id}">🗑 Supprimer</button></div>` : ''}
+  </div>`;
+}
+
+async function loadPois() {
+  if (!sb) return;
+  let rows = null;
+  try {
+    const { data, error } = await sb.from('pois').select('*').order('cree_le');
+    if (!error) rows = data || [];
+  } catch (e) { rows = null; }
+  if (!rows) return;
+  poiMarkers.forEach((m) => map.removeLayer(m));
+  poiMarkers = [];
+  rows.forEach((p) => {
+    const m = L.marker([Number(p.lat), Number(p.lng)], { icon: poiIcon(p) });
+    m.bindPopup(() => poiPopupHtml(p), { maxWidth: 260 });
+    m.on('popupopen', () => {
+      const el = m.getPopup().getElement();
+      if (!el) return;
+      const del = el.querySelector('[data-pdel]');
+      if (del) del.addEventListener('click', async () => {
+        const { error } = await sb.from('pois').delete().eq('id', p.id);
+        if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+        m.closePopup();
+        toast(`🗑 ${esc((POI[p.type] || {}).label || 'Point')} supprim\u00e9.`);
+        loadPois();
+        loadPoisAdmin();
+      });
+    });
+    m.addTo(map);
+    poiMarkers.push(m);
+  });
+}
+
+async function loadPoisAdmin() {
+  if (!isAdminUser || !sb) return;
+  const list = document.getElementById('poi-list');
+  if (!list) return;
+  const { data, error } = await sb.from('pois').select('id, type').order('cree_le');
+  if (error) { list.innerHTML = '<div class="hint">\u26a0\ufe0f ' + error.message + '</div>'; return; }
+  if (!data || !data.length) {
+    list.innerHTML = '<div class="hint">Aucun point logistique. Choisis un type et place-le sur la carte.</div>';
+    return;
+  }
+  list.innerHTML = data.map((p) => {
+    const info = POI[p.type] || { emoji: '📍', label: p.type };
+    return `<div class="poi-row">${info.emoji} ${esc(info.label)} <button type="button" class="mini no" data-pdel="${p.id}">🗑</button></div>`;
+  }).join('');
+  list.querySelectorAll('[data-pdel]').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const { error: err } = await sb.from('pois').delete().eq('id', b.dataset.pdel);
+      if (err) { toast('\u26a0\ufe0f ' + err.message, false); return; }
+      toast('🗑 Point logistique supprim\u00e9.');
+      loadPoisAdmin();
+      loadPois();
+    });
+  });
+}
+
+document.getElementById('btn-poi-add').addEventListener('click', () => {
+  placingPoi = !placingPoi;
+  poiType = document.getElementById('poi-type').value;
+  addBadge.classList.toggle('visible', placingPoi);
+  document.getElementById('map').style.cursor = placingPoi ? 'crosshair' : '';
+  if (placingPoi) {
+    addBadge.textContent = `📍 Cliquez sur la carte pour placer \u00ab ${(POI[poiType] || {}).label || poiType} \u00bb \u2014 annuler`;
+    toast('📍 Clique sur la carte pour placer ce point logistique.', false);
+  }
+});
 
 function setFormMode(target) {
   document.getElementById('modal-title').textContent = target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre';
   document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : 'Envoyer la proposition';
   document.getElementById('admin-fields').style.display = target === 'propose' ? 'none' : '';
-  document.getElementById('row-poi').style.display = target === 'propose' && isAdminUser ? '' : 'none';
   const pb = document.getElementById('btn-photo');
   pb.textContent = '📷 Prendre / choisir une photo';
   pb.disabled = false;
@@ -400,10 +493,6 @@ function collectFormValues() {
   if (addModeTarget !== 'propose') {
     const j = parseInt(document.getElementById('f-jour').value, 10);
     if (j === 1 || j === 2) props.jour = j;
-  }
-  if (addModeTarget === 'propose') {
-    const poi = val('f-poi');
-    if (poi && POI[poi]) props.poi = poi;
   }
   if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
   return props;
@@ -489,11 +578,9 @@ async function proposeFeature(props) {
     return;
   }
   const p = props;
-  const isPoi = isAdminUser && p.poi;
   const [lng, lat] = pendingCoords;
   const { error } = await sb.from('arbres').insert({
-    nom: isPoi ? (POI[p.poi] || {}).label || p.poi : p.nom,
-    poi: isPoi ? p.poi : null,
+    nom: p.nom,
     type: p.type,
     production: p.production,
     etat: p.etat,
@@ -505,10 +592,9 @@ async function proposeFeature(props) {
     notes: p.notes || null,
     kids_friendly: !!p.kids_friendly,
     acces_pieton: !!p.acces_pieton,
-    ramassage: p.ramassage || null,
     lng,
     lat,
-    statut: isPoi ? 'valide' : 'attente',
+    statut: 'attente',
   });
   if (error) {
     hideModal();
@@ -523,7 +609,6 @@ async function proposeFeature(props) {
     map.panTo([lat, lng]);
     await load();
     if (typeof loadAdminPanel === 'function') loadAdminPanel();
-    if (isPoi) { toast(`📍 ${esc((POI[p.poi] || {}).label || p.poi)} ajouté à la carte.`); return; }
     toast(`🫒 Proposition « <b>${esc(p.nom)}</b> » enregistrée — visible sur la carte (en pointillés) jusqu'à validation.`, false);
   } else {
     toast(`🙏 Merci ! La proposition « <b>${esc(p.nom)}</b> » attend la validation.`, false);
@@ -532,7 +617,22 @@ async function proposeFeature(props) {
 
 let pendingCoords = null;
 
-map.on('click', (e) => {
+map.on('click', async (e) => {
+  if (placingPoi) {
+    if (map.distance(e.latlng, L.latLng(ZONE.lat, ZONE.lng)) > ZONE.km * 1000) {
+      toast(`\u26a0\ufe0f Trop loin du village \u2014 limit\u00e9 \u00e0 ${ZONE.km} km autour de Claret.`, false);
+      return;
+    }
+    placingPoi = false;
+    addBadge.classList.remove('visible');
+    document.getElementById('map').style.cursor = '';
+    const info = POI[poiType] || {};
+    const { error } = await sb.from('pois').insert({ type: poiType, lng: e.latlng.lng, lat: e.latlng.lat });
+    if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
+    toast(`📍 ${esc(info.label || poiType)} ajout\u00e9 \u00e0 la carte.`);
+    loadPois();
+    return;
+  }
   if (!addMode) return;
   if (map.distance(e.latlng, L.latLng(ZONE.lat, ZONE.lng)) > ZONE.km * 1000) {
     toggleAdd(false);
@@ -550,8 +650,7 @@ map.on('click', (e) => {
 document.getElementById('tree-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const props = collectFormValues();
-  const isPoi = addModeTarget === 'propose' && isAdminUser && props.poi;
-  if (!props.nom && !isPoi) {
+  if (!props.nom) {
     const err = document.getElementById('form-err');
     err.textContent = 'Le nom est obligatoire.';
     err.classList.add('visible');
@@ -790,6 +889,8 @@ async function loadAdminPanel() {
   const evAdm = document.getElementById('event-admin');
   evAdm.style.display = isAdminUser ? '' : 'none';
   document.getElementById('sheet-admin').style.display = isAdminUser ? '' : 'none';
+  document.getElementById('poi-admin').style.display = isAdminUser ? '' : 'none';
+  fillPoiType();
   if (isAdminUser) {
     const et = document.getElementById('event-text');
     const { data: infoRows } = await sb.from('infos').select('cle, valeur').in('cle', ['rdv', 'jour1', 'jour2']);
@@ -797,6 +898,7 @@ async function loadAdminPanel() {
     if (document.activeElement !== et) et.value = info.rdv || '';
     if (document.activeElement !== document.getElementById('event-jour1')) document.getElementById('event-jour1').value = info.jour1 || '';
     if (document.activeElement !== document.getElementById('event-jour2')) document.getElementById('event-jour2').value = info.jour2 || '';
+    loadPoisAdmin();
   }
   const pl = document.getElementById('pending-list');
   const al = document.getElementById('admins-list');
@@ -1020,7 +1122,7 @@ function openTreeById(id) {
 }
 
 bootAdmin.finally(() => {
-  Promise.all([load(), loadEventBanner()]).then(() => {
+  Promise.all([load(), loadEventBanner(), loadPois()]).then(() => {
     fetchWeather();
     const wantedId = new URLSearchParams(location.search).get('arbre');
     if (wantedId) openTreeById(wantedId);

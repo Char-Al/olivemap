@@ -251,6 +251,13 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 4px 0; font-size: 13px;
 }
+.poi-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; padding: 6px 8px; margin-top: 4px;
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.poi-row button { margin-left: auto; }
+
 #add-admin-row { display: flex; gap: 8px; margin-top: 6px; }
 #add-admin-row input { flex: 1; }
 #add-admin-row button {
