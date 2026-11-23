@@ -251,9 +251,12 @@ function render() {
     markers.push({ marker, f });
     marker.addTo(map);
   });
-  document.getElementById('counter').innerHTML = poiOnly
-    ? `<b>📍</b> ${poiMarkers.length} point${poiMarkers.length > 1 ? 's' : ''}`
-    : `<b>${feats.length}</b>/${allFeatures.length}`;
+  document.getElementById('counter').innerHTML = `<b>${feats.length}</b>/${allFeatures.length}`;
+  const lp = document.getElementById('legend-poi');
+  if (lp) {
+    lp.style.display = poiMarkers.length ? '' : 'none';
+    lp.innerHTML = '<span class="swatch-poi">📍</span>Logistique (' + poiMarkers.length + ')';
+  }
   renderJourFilters();
   updatePendingAlert();
   updateJourSummary();
@@ -265,6 +268,8 @@ function updatePendingAlert() {
   const n = isAdminUser ? allFeatures.filter((f) => (f.properties || {}).statut === 'attente').length : 0;
   b.textContent = n ? `⏳ ${n} demande${n > 1 ? 's' : ''} en attente` : '';
   b.style.display = n ? 'block' : 'none';
+  const lp = document.getElementById('legend-pending');
+  if (lp) lp.style.display = n ? 'flex' : 'none';
 }
 
 document.getElementById('pending-alert').addEventListener('click', async () => {
@@ -773,8 +778,6 @@ async function refreshAdminState() {
   const b = document.getElementById('btn-admin');
   b.classList.toggle('active', isAdminUser);
   b.title = isAdminUser ? `Espace admin (${pseudoOf(currentEmail)})` : 'Espace admin';
-  const lp = document.getElementById('legend-pending');
-  if (lp) lp.style.display = isAdminUser ? 'flex' : 'none';
   const bp = document.getElementById('btn-poi');
   if (bp) bp.style.display = isAdminUser ? '' : 'none';
   return isAdminUser;
@@ -1007,6 +1010,22 @@ document.getElementById('widgets-toggle').addEventListener('click', () => {
 });
 
 setWidgetsVisible(localStorage.getItem('olivemap_widgets') !== '0');
+setLegendFolded(localStorage.getItem('olivemap_legend') === '1');
+
+function setLegendFolded(v) {
+  const body = document.getElementById('legend-body');
+  const btn = document.getElementById('legend-fold');
+  if (!body || !btn) return;
+  body.style.display = v ? 'none' : 'contents';
+  btn.textContent = v ? '\u203a' : '\u2039';
+  btn.title = v ? 'D\u00e9plier la l\u00e9gende' : 'Replier la l\u00e9gende';
+  localStorage.setItem('olivemap_legend', v ? '1' : '0');
+}
+
+document.getElementById('legend-fold').addEventListener('click', () => {
+  const body = document.getElementById('legend-body');
+  setLegendFolded(body.style.display !== 'none');
+});
 
 async function loadJourSummary() {
   if (!sb) return;
