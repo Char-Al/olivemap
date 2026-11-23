@@ -975,7 +975,7 @@ function renderJourFilters() {
 
 async function shareMap() {
   const url = location.origin + location.pathname;
-  const text = '🫚 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective';
+  const text = '🫒 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective';
   if (navigator.share) {
     try { await navigator.share({ title: 'Olivmap', text, url }); } catch (e) { /* partage annulé */ }
     return;
@@ -1118,7 +1118,7 @@ document.getElementById('btn-share').addEventListener('click', shareMap);
 
 document.getElementById('btn-share-wa').addEventListener('click', () => {
   const url = location.origin + location.pathname;
-  const text = '🫚 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective : ' + url;
+  const text = '🫒 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective : ' + url;
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
 });
 
