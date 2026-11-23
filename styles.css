@@ -476,3 +476,4 @@ html, body {
 .list-row.done { opacity: .55; }
 .list-row.done .lr-name { text-decoration: line-through; }
 .list-row .lr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+form>.form-details summary { cursor: pointer; user-select: none; color: var(--accent); font-size: 12px; }
