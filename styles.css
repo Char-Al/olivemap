@@ -452,3 +452,18 @@ html, body {
 .popup-details dl { margin-top: 6px; }
 .part-me { font-size: 11px; color: var(--text-dim); align-self: center; }
 .part-form.part-me-row { justify-content: space-between; }
+.intro-card {
+  position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(23, 29, 25, .92);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(43, 54, 46, .8);
+  border-radius: 14px;
+  padding: 14px 20px;
+  max-width: 340px; width: calc(100vw - 32px);
+  font-size: 12.5px; color: var(--text); line-height: 1.5;
+  box-shadow: 0 4px 18px rgba(0,0,0,.4);
+  text-align: center;
+}
+.intro-card .intro-emoji { font-size: 26px; margin-bottom: 6px; }
+.intro-card p { margin: 0 0 6px; }
