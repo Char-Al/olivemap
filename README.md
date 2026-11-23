@@ -5,7 +5,7 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 - Carte OpenStreetMap avec marqueurs cliquables (popup : propriétaire, rendement, espèce, hauteur, circonférence, année de plantation, état, notes, photo…)
 - **2 couleurs de points** : vert = arbre d'un particulier, bleu = arbre de la mairie
 - **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et le marqueur affiche **1, 2 ou 3 olives 🫒** selon le rendement, visible d'un coup d'œil sur la carte
-- **Filtres cliquables dans la légende** : un clic sur « Particulier » ou « Mairie » masque/affiche chaque type de point (les deux actifs par défaut), et le bouton 🚚 « À ramasser » isole les ramassages à venir
+- **Filtres cliquables dans la légende** : un clic sur « Particulier » ou « Mairie » masque/affiche chaque type de point (les deux actifs par défaut), et le bouton 🚚 « À ramasser » isole les arbres pas encore ramassés
 - **Proposition d'un arbre par n'importe quel visiteur** (bouton 🙋) : le point part dans la base Supabase et attend la validation d'un admin
 - Bouton de géolocalisation
 - Responsive, fonctionne sur mobile
@@ -26,7 +26,7 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 **⭕ Zone de proposition** : les propositions (_visiteurs_ comme _admins_) sont **limitées à 3 km autour du village de Claret** — le cercle du périmètre autorisé est **affiché en permanence sur la carte** (pointillés jaunes, entrée « Limite de proposition » dans la légende). Le contrôle est aussi côté base : la policy RLS d'insertion refuse toute coordonnée hors de la zone (les lignes `lat between` / `lng between` de `supabase.sql`) — ajuste-les avec `ZONE` dans `index.html` si tu changes le périmètre.
 
-**⏱ Date de ramassage** : réservée aux **administrateurs** — le champ est masqué dans le formulaire public et la base refuse toute insertion publique avec une date (RLS). Un admin peut la définir **au moment de la validation**.
+**🗓 Jours de cueillette** : les dates vivent sur des **jours de cueillette** créés par les admins (autant que nécessaire, table `jours`) — chaque arbre est rattaché (ou non) à un jour, la date ne se saisit jamais sur l'arbre.
 
 **🙋 Participations** : dans la popup de tout arbre validé, n'importe qui peut s'inscrire (« 🙋 Je viens ») avec son pseudo et un nombre de personnes. Le total et la liste apparaissent dans la popup. Nécessite la section 8 de `supabase.sql`.
 
@@ -40,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v29`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v31`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -52,10 +52,10 @@ Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v29`) :
 **👑 Panneau admin (bouton 👑 du site)**
 
 - Connexion par **identifiant (pseudo) + mot de passe** — pas d'email affiché. Le pseudo est mappé en interne vers le compte système Supabase `pseudo@olivemap.claret`. Le mot de passe n'est jamais stocké en clair (bcrypt + sel, côté Supabase).
-- Voir les **demandes en attente**, définir une date de ramassage, **valider** ✅ ou **rejeter** 🗑️ en un clic
-- Les demandes en attente apparaissent aussi **directement sur la carte** pour les admins connectés : point **en pointillés et translucide**, popup marquée « ⏳ En attente » avec **date + heure de ramassage (optionnel)** et boutons **Valider/Rejeter** directement dans le popup (invisibles pour les visiteurs, filtre RLS)
-- **Édition complète depuis la popup** (admins) : bouton « ✏️ Modifier » (formulaire pré-rempli : tous les champs + date de ramassage), « ⏳ Dévalider » (remet l’arbre en attente) et « 🗑 Supprimer » — protégé par la RLS côté base
-- **Tableau récapitulatif de tous les arbres** en base (nom, propriétaire, rendement, espèce, ramassage, statut) avec actions rapides : valider/dévalider, supprimer
+- Voir les **demandes en attente**, **valider** ✅ ou **rejeter** 🗑️ en un clic
+- Les demandes en attente apparaissent aussi **directement sur la carte** pour les admins connectés : point **en pointillés et translucide**, popup marquée « ⏳ En attente » avec boutons **Valider/Rejeter** directement dans le popup (invisibles pour les visiteurs, filtre RLS)
+- **Édition complète depuis la popup** (admins) : bouton « ✏️ Modifier » (formulaire pré-rempli : tous les champs + jour de cueillette), « ⏳ Dévalider » (remet l’arbre en attente) et « 🗑 Supprimer » — protégé par la RLS côté base
+- **Tableau récapitulatif de tous les arbres** en base (nom, propriétaire, rendement, espèce, jour, statut) avec actions rapides : valider/dévalider, supprimer
 - **Gérer les administrateurs** : ajouter un pseudo (`＋`) ou en retirer — le premier admin doit néanmoins être inséré à la main : dans le SQL Editor, décommente la section 7 de `supabase.sql` avec ton pseudo (sous la forme du compte système) :
 
 ```sql
@@ -112,7 +112,7 @@ Structure d'une entrée :
 - Tous les champs sauf `nom` sont optionnels ; ajoute tes propres clés, elles apparaîtront dans le popup
 - `kids_friendly` : `true` si l'arbre est adapté aux enfants (affiché 👶 dans le popup)
 - `acces_pieton` : `true` si l'accès est piéton uniquement (affiché 🚶 dans le popup)
-- `ramassage` : date/heure prévue de ramassage, format `"AAAA-MM-JTHH:MM"` (p. ex. `"2026-12-15T09:30"`) — affichée 🚚 dans le popup ; **une fois la date passée, le marqueur devient grisé** (opacity réduite) et le popup affiche ✅ Ramassé
+- `jour` : numéro du jour de cueillette auquel l'arbre est rattaché (saisi par un admin) — affiché dans le popup avec la date du jour
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
 - Pour une photo : héberge-la (p. ex. dans un dossier `photos/` du dépôt) et mets son URL
 
@@ -120,20 +120,20 @@ Structure d'une entrée :
 
 Une pilule discrète en bas à droite affiche les prévisions **3 jours** sur la zone (températures mini/maxi et probabilité de pluie) via [Open-Meteo](https://open-meteo.com/) — gratuit, sans clé API. Elle reste cachée si l'API est injoignable (hors-ligne).
 
-## 🥊 Cueillette en 2 jours (Jour 1 / Jour 2)
+## Cueillette collective en N jours (Jour 1, Jour 2, …)
 
-La récolte s'organise sur **deux journées** ; chaque arbre est rattaché (ou non) à l'un des deux :
+Les **jours de cueillette** sont créés par les admins (autant que nécessaire, chacun avec sa date) ; chaque arbre est rattaché (ou non) à l'un d'eux :
 
-- **Jour par arbre** : les admins choisissent dans la popup ✏️ Modifier → *Jour de cueillette* (`Jour 1` 🟠, `Jour 2` 🔵 ou *peu importe*). Le jour s'affiche dans le popup.
-- **Filtres Jour 1 / Jour 2** : boutons 🟠/🔵 en haut de la carte pour ne montrer que les arbres d'un jour (un seul actif à la fois, aucun = tout afficher).
-- **Annonce** : les admins écrivent le rendez-vous / consignes dans le panneau admin (*Annonce*, 📢 Enregistrer) → bandeau visible par tous. Fermetable ; le message reste caché jusqu'à sa prochaine modification.
+- **Jour par arbre** : les admins choisissent dans la popup ✏️ Modifier → *Jour de cueillette* (liste des jours créés, ou *peu importe*). Le jour — et sa date — s'affiche dans le popup.
+- **Filtres Jour** : un bouton par jour créé (généré automatiquement) en haut de la carte ; un seul actif à la fois, aucun = tout afficher. Le compteur du jour (`4/7`) suit l'avancement du ramassage.
+- **Annonce et jours** : les admins écrivent le rendez-vous / consignes, ajoutent des jours + leurs dates (➕ *Ajouter un jour*, 🗑 pour retirer) puis « 💾 Enregistrer » → bandeau visible par tous. Fermetable ; le message reste caché jusqu'à sa prochaine modification.
 - **Matériel par arbre** : les cochent 🪜 Échelle / 🧺 Caisses / 🪮 Râteau / 🥅 Bâche ou filet nécessaires dans la fenêtre admin d'un arbre → affichés dans le popup.
 - **J'apporte** : dans *Je viens*, le volontaire coche ce qu'il apporte (🪜 échelle, 🧺 caisses, 🪮 râteau, 🥅 bâche ou filet — plusieurs choix possibles) ; visible dans la liste des participants (suppression par les admins).
 - **Partage** : bouton 🔗 Partager l'arbre dans le popup → lien direct `?arbre=<id>` qui ouvre la carte centrée sur l'arbre ; bouton 🧭 Itinéraire → navigation Google Maps.
-- **Points logistiques** : les admins ajoutent via 🙋 *Proposer* un point d'eau, WC, parking, accueil ou pesée (champ *Point logistique*) → pastille emoji 📍 sur la carte, toujours visible.
+- **Points logistiques** (table dédiée `pois`, indépendante des arbres) : dans le panneau admin, choisis un type (eau 💧, WC 🚻, parking 🎫, accueil 🏠, pesée ⚖️) puis « 📍 Placer sur la carte » et clique à l'endroit voulu ; suppression par la liste ou le popup.
 - **Suivi d'avancement** : dans le popup admin, ✔️ Ramassé / ↩️ À faire fait tourner les compteurs des boutons Jour (4/7) ; les arbres faits ont un anneau vert.
-- **Dates de la cueillette** : dans le panneau admin, *Date Jour 1* / *Date Jour 2* — le jour J, le filtre correspondant s'active tout seul (📢 toast).
-- **Feuille d'équipe imprimable** : 🖨️ Jour 1 / 🖨️ Jour 2 dans le panneau admin → liste imprimable des arbres, matériel et volontaires, avec cases à cocher papier.
+- **Jour J** : quand la date d'un jour correspond à aujourd'hui, le filtre de ce jour s'active tout seul au chargement (📢 toast).
+- **Feuille d'équipe imprimable** : un bouton 🖨️ par jour dans le panneau admin → liste imprimable des arbres, matériel et volontaires, avec cases à cocher papier.
 
 ## 🗺️ Changer la zone par défaut
 

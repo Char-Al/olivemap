@@ -48,13 +48,13 @@ function oliveGlyphs(prod) {
   return `<text x="17" y="21" text-anchor="middle" font-size="${S}">🫒</text>`;
 }
 
-function markerIcon(props, past) {
+function markerIcon(props) {
   const color = OWNER_COLORS[props.type] || '#7fb069';
   const pending = props.statut === 'attente';
   const prod = Math.min(Math.max(parseInt(props.production, 10) || 1, 1), 3);
   return L.divIcon({
     className: 'tree-marker',
-    html: `<div class="tree-icon${past ? ' past' : ''}${pending ? ' pending' : ''}${props.ramasse ? ' done' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+    html: `<div class="tree-icon${pending ? ' pending' : ''}${props.ramasse ? ' done' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
       <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="${color}" stroke-width="2"/>
       <circle cx="17" cy="38" r="2.4" fill="${color}"/>
       ${oliveGlyphs(prod)}
@@ -102,14 +102,9 @@ function popupHtml(props, coords) {
     rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || esc(props.etat)}</span>`]);
   }
   if (props.ramasse) rows.push(['Cueillette', '✅ Ramassé']);
-  if (props.ramassage) {
-    const d = new Date(props.ramassage);
-    const past = d < new Date();
-    rows.push([past ? 'Ramassé' : 'Ramassage', `${past ? '✅' : '🚚'} ${d.toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`]);
-  }
   if (props.jour) rows.push([
     'Jour',
-    props.jour === 1 ? '🟠 Jour 1' : '🔵 Jour 2',
+    `${dayEmoji(props.jour)} Jour ${props.jour}${dayDateTxt(props.jour)}`,
   ]);
   const mat = [
     props.besoin_echelle ? '🪜 Échelle' : null,
@@ -121,7 +116,7 @@ function popupHtml(props, coords) {
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
-    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'].includes(k) && v != null && v !== '') {
+    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'].includes(k) && v != null && v !== '') {
       rows.push([esc(k), esc(String(v))]);
     }
   }
@@ -131,9 +126,8 @@ function popupHtml(props, coords) {
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
     ${props.notes ? `<div class="notes">${esc(props.notes)}</div>` : ''}
-    ${props.id && props.statut !== 'attente' && (props.jour === 1 || props.jour === 2 || (props.ramassage && new Date(props.ramassage) >= new Date())) ? '<div class="part-zone" data-part></div>' : ''}
+    ${props.id && props.statut !== 'attente' && props.jour ? '<div class="part-zone" data-part></div>' : ''}
     ${actPending ? `
-      <label class="p-date">Date de ramassage (optionnel) <input type="datetime-local" data-date /></label>
       <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
     ${adminRow}
     ${shareRow}
@@ -144,18 +138,14 @@ function visibleFeatures() {
   const showM = document.getElementById('legend-mairie').classList.contains('active');
   const showP = document.getElementById('legend-particulier').classList.contains('active');
   const op = document.getElementById('btn-filter-open').classList.contains('active');
-  const j1 = document.getElementById('btn-jour1').classList.contains('active');
-  const j2 = document.getElementById('btn-jour2').classList.contains('active');
-  const now = new Date();
   return allFeatures.filter((f) => {
     const p = f.properties || {};
     if (p.type === 'mairie' && !showM) return false;
     if (p.type === 'particulier' && !showP) return false;
-    if (j1 && p.jour !== 1) return false;
-    if (j2 && p.jour !== 2) return false;
+    if (dayFilter && p.jour !== dayFilter) return false;
     if (op) {
       if (p.statut === 'attente') return false;
-      if (p.ramassage && new Date(p.ramassage) < now) return false;
+      if (p.ramasse) return false;
     }
     return true;
   });
@@ -166,8 +156,7 @@ function render() {
   markers = [];
   const feats = visibleFeatures();
   feats.forEach((f) => {
-    const past = (f.properties || {}).ramassage ? new Date(f.properties.ramassage) < new Date() : false;
-    const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}, past) });
+    const marker = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], { icon: markerIcon(f.properties || {}) });
     marker.bindPopup(() => popupHtml(f.properties, f.geometry.coordinates), { maxWidth: 280 });
     if (f.properties && f.properties.id) {
       marker.on('popupopen', () => {
@@ -176,11 +165,9 @@ function render() {
         const act = async (kind) => {
           const id = f.properties.id;
           if (kind === 'ok') {
-            const dEl = el.querySelector('[data-date]');
-            const date = dEl && dEl.value ? new Date(dEl.value).toISOString() : null;
-            const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date }).eq('id', id);
+            const { error } = await sb.from('arbres').update({ statut: 'valide' }).eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-            toast(`\u2705 \u00ab ${esc(f.properties.nom)} \u00bb valid\u00e9${date ? ' \u2014 ramassage pr\u00e9vu le ' + dEl.value.replace('T', ' \u00e0 ') : ''} \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
+            toast(`\u2705 \u00ab ${esc(f.properties.nom)} \u00bb valid\u00e9 \u2014 il appara\u00eet d\u00e9sormais pour tout le monde.`);
           } else {
             const { error } = await sb.from('arbres').delete().eq('id', id);
             if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
@@ -223,7 +210,7 @@ function render() {
           await load();
         });
         const pz = el.querySelector('[data-part]');
-        if (pz) loadParticipations(f.properties.id, pz, f.properties.ramassage);
+        if (pz) loadParticipations(f.properties.id, pz, f.properties.jour);
         const sh = el.querySelector('[data-share]');
         if (sh) sh.addEventListener('click', () => {
           const link = `${location.origin}${location.pathname}?arbre=${f.properties.id}`;
@@ -233,18 +220,13 @@ function render() {
         });
       });
     }
-    marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${esc(f.properties.nom || 'Arbre')} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}${past ? ' ✓' : ''}`, { direction: 'top', offset: [0, -44] });
+    marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${esc(f.properties.nom || 'Arbre')} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}`, { direction: 'top', offset: [0, -44] });
     markers.push({ marker, f });
     marker.addTo(map);
   });
   document.getElementById('counter').innerHTML =
     `<b>${feats.length}</b>/${allFeatures.length}`;
-  const dayStats = (d) => {
-    const lst = allFeatures.map((f) => f.properties || {}).filter((p) => p.jour === d);
-    return lst.length ? ` (${lst.filter((p) => p.ramasse).length}/${lst.length})` : '';
-  };
-  document.getElementById('btn-jour1').textContent = `🟠 Jour 1${dayStats(1)}`;
-  document.getElementById('btn-jour2').textContent = `🔵 Jour 2${dayStats(2)}`;
+  renderJourFilters();
 }
 
 function toast(html, autohide = true) {
@@ -258,7 +240,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -308,18 +290,6 @@ document.getElementById('legend-particulier').addEventListener('click', () => {
 });
 document.getElementById('legend-mairie').addEventListener('click', () => {
   document.getElementById('legend-mairie').classList.toggle('active');
-  render();
-});
-document.getElementById('btn-jour1').addEventListener('click', () => {
-  document.getElementById('btn-jour2').classList.remove('active');
-  document.getElementById('btn-jour1').classList.toggle('active');
-  visibleFeatures();
-  render();
-});
-document.getElementById('btn-jour2').addEventListener('click', () => {
-  document.getElementById('btn-jour1').classList.remove('active');
-  document.getElementById('btn-jour2').classList.toggle('active');
-  visibleFeatures();
   render();
 });
 document.getElementById('btn-filter-open').addEventListener('click', () => {
@@ -494,17 +464,10 @@ function collectFormValues() {
     const j = parseInt(document.getElementById('f-jour').value, 10);
     if (j === 1 || j === 2) props.jour = j;
   }
-  if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
   return props;
 }
 
 let editTreeId = null;
-
-function localDT(v) {
-  const d = new Date(v);
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
 
 function fillForm(props) {
   document.getElementById('f-nom').value = props.nom || '';
@@ -525,7 +488,6 @@ function fillForm(props) {
   document.getElementById('f-rateau').checked = !!props.besoin_rateau;
   document.getElementById('f-bache').checked = !!props.besoin_bache;
   document.getElementById('f-jour').value = props.jour ? String(props.jour) : '';
-  document.getElementById('f-ramassage').value = props.ramassage ? localDT(props.ramassage) : '';
 }
 
 function startEdit(props, coords) {
@@ -562,7 +524,6 @@ async function updateFeature(id) {
     besoin_rateau: !!props.besoin_rateau,
     besoin_bache: !!props.besoin_bache,
     jour: props.jour || null,
-    ramassage: props.ramassage || null,
   }).eq('id', id);
   editTreeId = null;
   hideModal();
@@ -766,13 +727,13 @@ function adminsRow(email, removable) {
 const esc = (t) => String(t).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 const APPORT_LABELS = { echelle: '🪜 échelle', caisses: '🧺 caisses', rateau: '🪮 râteau', bache: '🥅 bâche ou filet', filet: '🥅 bâche ou filet', deux: '🪜 🧺' };
 
-async function loadParticipations(id, zone, quand) {
+async function loadParticipations(id, zone, jour) {
   if (!sb) return;
   zone.innerHTML = '<div class="hint">⏳ Chargement…</div>';
   const { data, error } = await sb.from('participations').select('id, pseudo, nb_personnes, apporte').eq('arbre_id', id).order('cree_le');
   if (error) { zone.innerHTML = '<div class="hint">⚠️ ' + error.message + '</div>'; return; }
   const total = (data || []).reduce((a, r) => a + (r.nb_personnes || 1), 0);
-  const quandTxt = quand ? ` 🚚 ${new Date(quand).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : '';
+  const jourTxt = jour ? ` 🚚 ${dayEmoji(jour)} Jour ${jour}${dayDateTxt(jour)}` : '';
   const list = (data || []).map((r) => {
     const del = isAdminUser
       ? ` <button type="button" class="mini no part-del" data-pid="${r.id}" title="Retirer ce volontaire">✕</button>`
@@ -783,7 +744,7 @@ async function loadParticipations(id, zone, quand) {
   }).join('');
   const me = localStorage.getItem('olivemap_pseudo') || '';
   zone.innerHTML = `
-    <div class="part-head">👥 ${total} participant${total > 1 ? 's' : ''}${quandTxt}</div>
+    <div class="part-head">👥 ${total} participant${total > 1 ? 's' : ''}${jourTxt}</div>
     ${list ? `<div class="part-list">${list}</div>` : ''}
     <div class="part-form">
       <input data-part-pseudo placeholder="ton pseudo" value="${esc(me)}" />
@@ -802,7 +763,7 @@ async function loadParticipations(id, zone, quand) {
       const { error: err } = await sb.from('participations').delete().eq('id', b.dataset.pid);
       if (err) { toast('⚠️ ' + err.message, false); return; }
       toast('❌ Volontaire retiré.');
-      loadParticipations(id, zone, quand);
+      loadParticipations(id, zone, jour);
     });
   });
   const go = zone.querySelector('[data-part-go]');
@@ -815,7 +776,7 @@ async function loadParticipations(id, zone, quand) {
     if (err) { toast('⚠️ ' + err.message, false); return; }
     localStorage.setItem('olivemap_pseudo', pseudo);
     toast(`🙋 ${pseudo} · ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
-    loadParticipations(id, zone, quand);
+    loadParticipations(id, zone, jour);
   });
 }
 
@@ -850,16 +811,116 @@ async function fetchWeather() {
   } catch (err) { /* widget caché si hors-ligne / API injoignable */ }
 }
 
-const harvestDates = { 1: null, 2: null };
+let joursRows = [];
+let joursRemoved = [];
+let dayFilter = null;
+
+function dayEmoji(n) { return ['🟠', '🔵', '🟢', '🟣', '🔴'][(Number(n) - 1) % 5]; }
+
+function dayDateTxt(n, long = false) {
+  const j = joursRows.find((x) => x.numero === Number(n));
+  if (!j || !j.date) return '';
+  return ' — ' + new Date(j.date + 'T12:00:00').toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long' } : { day: 'numeric', month: 'short' });
+}
+
+async function loadJours() {
+  if (!sb) return;
+  const keep = ({ numero, date }) => ({ numero, date });
+  const saved = joursRows.map(keep);
+  const { data, error } = await sb.from('jours').select('numero, date').order('numero');
+  if (!error && Array.isArray(data) && data.length) {
+    joursRows = data.map((r) => ({ numero: r.numero, date: r.date || null }));
+  } else {
+    const { data: infoRows } = await sb.from('infos').select('cle, valeur').in('cle', ['jour1', 'jour2']);
+    const info = Object.fromEntries((infoRows || []).map((r) => [r.cle, r.valeur]));
+    joursRows = [];
+    if (info.jour1) joursRows.push({ numero: 1, date: info.jour1.slice(0, 10) });
+    if (info.jour2) joursRows.push({ numero: 2, date: info.jour2.slice(0, 10) });
+    if (saved.length && saved.some((j) => j.date)) joursRows = saved;
+  }
+}
+
+function renderJourFilters() {
+  const c = document.getElementById('jour-filters');
+  if (!c) return;
+  if (dayFilter && !joursRows.some((j) => j.numero === dayFilter)) dayFilter = null;
+  c.innerHTML = '';
+  joursRows.forEach((j) => {
+    const lst = allFeatures.map((f) => f.properties || {}).filter((p) => p.jour === j.numero);
+    const st = lst.length ? ` (${lst.filter((p) => p.ramasse).length}/${lst.length})` : '';
+    const b = document.createElement('button');
+    b.className = 'btn' + (dayFilter === j.numero ? ' active' : '');
+    b.title = 'Ne montrer que les arbres du Jour ' + j.numero;
+    b.textContent = `${dayEmoji(j.numero)} Jour ${j.numero}${st}`;
+    b.addEventListener('click', () => {
+      dayFilter = dayFilter === j.numero ? null : j.numero;
+      render();
+    });
+    c.appendChild(b);
+  });
+}
+
+function fillJourSelect() {
+  const sel = document.getElementById('f-jour');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Peu importe</option>' +
+    joursRows.map((j) => `<option value="${j.numero}">${dayEmoji(j.numero)} Jour ${j.numero}${dayDateTxt(j.numero)}</option>`).join('');
+  if ([...sel.options].some((o) => o.value === String(cur))) sel.value = String(cur);
+}
+
+function renderJoursAdmin() {
+  const list = document.getElementById('jours-list');
+  if (!list) return;
+  list.innerHTML = '';
+  joursRows.forEach((j) => {
+    const row = document.createElement('div');
+    row.className = 'jour-row';
+    row.innerHTML = `<span class="j-name">${dayEmoji(j.numero)} Jour ${j.numero}</span>` +
+      `<input type="date" value="${j.date || ''}" data-jd="${j.numero}" />` +
+      `<button type="button" class="mini no" data-jr="${j.numero}" title="Supprimer ce jour">🗑</button>`;
+    row.querySelector('[data-jr]').addEventListener('click', () => {
+      joursRows = joursRows.filter((x) => x.numero !== j.numero);
+      if (!joursRemoved.includes(j.numero)) joursRemoved.push(j.numero);
+      renderJoursAdmin();
+      fillJourSelect();
+    });
+    list.appendChild(row);
+  });
+}
+
+function renderSheetButtons() {
+  const c = document.getElementById('sheet-jours');
+  if (!c) return;
+  c.innerHTML = '';
+  if (!joursRows.length) { c.innerHTML = '<div class="hint">Aucun jour de cueillette créé.</div>'; return; }
+  joursRows.forEach((j) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mini edit';
+    b.textContent = `🖨️ Jour ${j.numero}`;
+    b.addEventListener('click', () => printSheet(j.numero));
+    c.appendChild(b);
+  });
+}
+
+document.getElementById('btn-jour-add').addEventListener('click', () => {
+  const n = joursRows.reduce((m, j) => Math.max(m, j.numero), 0) + 1;
+  joursRows.push({ numero: n, date: null });
+  renderJoursAdmin();
+  fillJourSelect();
+});
+
 
 async function loadEventBanner() {
   const banner = document.getElementById('event-banner');
+  await loadJours();
+  renderJourFilters();
+  fillJourSelect();
   if (!sb) { banner.style.display = 'none'; return; }
-  const { data, error } = await sb.from('infos').select('cle, valeur').in('cle', ['rdv', 'jour1', 'jour2']);
+  const { data, error } = await sb.from('infos').select('cle, valeur').eq('cle', 'rdv');
   if (error) { banner.style.display = 'none'; return; }
   const info = Object.fromEntries((data || []).map((r) => [r.cle, r.valeur]));
-  harvestDates[1] = (info.jour1 || '').slice(0, 10) || null;
-  harvestDates[2] = (info.jour2 || '').slice(0, 10) || null;
   if (!info.rdv || sessionStorage.getItem('olivemap_banner_ok') === info.rdv) { banner.style.display = 'none'; return; }
   banner.innerHTML =
     '<span class="eb-text">📢 ' + esc(info.rdv).replace(/\n/g, '<br/>') + '</span>' +
@@ -869,17 +930,13 @@ async function loadEventBanner() {
     banner.style.display = 'none';
     sessionStorage.setItem('olivemap_banner_ok', info.rdv);
   });
-  const iso = new Date().toISOString().slice(0, 10);
-  const tod = harvestDates[1] === iso ? 1 : (harvestDates[2] === iso ? 2 : null);
-  if (tod) {
-    const b1 = document.getElementById('btn-jour1');
-    const b2 = document.getElementById('btn-jour2');
-    if (!b1.classList.contains('active') && !b2.classList.contains('active')) {
-      document.getElementById('btn-jour' + tod).classList.add('active');
-      visibleFeatures();
-      render();
-      toast(`📢 C'est aujourd'hui : Jour ${tod} — filtre activé.`);
-    }
+  const iso = new Date().toLocaleDateString('sv-SE');
+  const tod = joursRows.find((j) => j.date === iso);
+  if (tod && !dayFilter) {
+    dayFilter = tod.numero;
+    visibleFeatures();
+    render();
+    toast(`📢 C'est aujourd'hui : Jour ${tod.numero} — filtre activé.`);
   }
 }
 
@@ -893,11 +950,14 @@ async function loadAdminPanel() {
   fillPoiType();
   if (isAdminUser) {
     const et = document.getElementById('event-text');
-    const { data: infoRows } = await sb.from('infos').select('cle, valeur').in('cle', ['rdv', 'jour1', 'jour2']);
+    const { data: infoRows } = await sb.from('infos').select('cle, valeur').eq('cle', 'rdv');
     const info = Object.fromEntries((infoRows || []).map((r) => [r.cle, r.valeur]));
     if (document.activeElement !== et) et.value = info.rdv || '';
-    if (document.activeElement !== document.getElementById('event-jour1')) document.getElementById('event-jour1').value = info.jour1 || '';
-    if (document.activeElement !== document.getElementById('event-jour2')) document.getElementById('event-jour2').value = info.jour2 || '';
+    await loadJours();
+    renderJoursAdmin();
+    fillJourSelect();
+    renderJourFilters();
+    renderSheetButtons();
     loadPoisAdmin();
   }
   const pl = document.getElementById('pending-list');
@@ -921,16 +981,14 @@ async function loadAdminPanel() {
       card.innerHTML = `
         <div class="p-name">${esc(t.nom)}</div>
         <div class="p-meta">${OWNER_LABELS[t.type] || t.type} · rendement ${t.production ?? '\u2014'} · propos\u00e9 le ${t.cree_le ? new Date(t.cree_le).toLocaleDateString('fr-FR') : '\u2014'}</div>
-        <label>Date de ramassage (optionnel) <input type="datetime-local" class="p-date" /></label>
         <div class="p-actions">
           <button class="mini ok" data-id="${t.id}">\u2705 Valider</button>
           <button class="mini no" data-id="${t.id}">\u{1F5D1} Rejeter</button>
         </div>`;
       card.querySelector('.ok').addEventListener('click', async () => {
-        const date = card.querySelector('.p-date').value;
-        const { error } = await sb.from('arbres').update({ statut: 'valide', ramassage: date || null }).eq('id', t.id);
+        const { error } = await sb.from('arbres').update({ statut: 'valide' }).eq('id', t.id);
         if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-        toast(`\u2705 \u00ab ${esc(t.nom)} \u00bb valid\u00e9${date ? ' (ramassage : ' + date + ')' : ' sans date de ramassage'}.`, false);
+        toast(`\u2705 \u00ab ${esc(t.nom)} \u00bb valid\u00e9 \u2014 il appara\u00eet d\u00e9sormais pour tout le monde..`, false);
         loadAdminPanel();
         load();
       });
@@ -945,19 +1003,19 @@ async function loadAdminPanel() {
   }
   const at = document.getElementById('arbres-table');
   at.innerHTML = '<div class="hint">\u23f3 Chargement\u2026</div>';
-  const { data: every, error: tErr } = await sb.from('arbres').select('id, nom, type, production, espece, statut, ramassage').order('nom');
+  const { data: every, error: tErr } = await sb.from('arbres').select('id, nom, type, production, espece, statut, jour').order('nom');
   if (tErr) { at.innerHTML = '<div class="hint">\u26a0\ufe0f ' + tErr.message + '</div>'; }
   else if (!every || !every.length) { at.innerHTML = '<div class="hint">Aucun arbre en base.</div>'; }
   else {
     const tbl = document.createElement('table');
     tbl.className = 'admin-tbl';
-    tbl.innerHTML = `<thead><tr><th>Nom</th><th>Prop.</th><th>Rdt</th><th>Esp\u00e8ce</th><th>Ramassage</th><th>Statut</th><th>Actions</th></tr></thead><tbody>` +
+    tbl.innerHTML = `<thead><tr><th>Nom</th><th>Prop.</th><th>Rdt</th><th>Esp\u00e8ce</th><th>Jour</th><th>Statut</th><th>Actions</th></tr></thead><tbody>` +
       every.map((t) => `<tr data-id="${t.id}">
         <td>${esc(t.nom)}</td>
         <td>${OWNER_LABELS[t.type] || t.type || '\u2014'}</td>
         <td>${t.production == null ? '\u2014' : t.production}</td>
         <td>${esc(t.espece || '\u2014')}</td>
-        <td>${t.ramassage ? localDT(t.ramassage).replace('T', ' ') : '\u2014'}</td>
+        <td>${t.jour ? dayEmoji(t.jour) + ' Jour ' + t.jour : '\u2014'}</td>
         <td>${t.statut === 'valide' ? '\u2705' : '\u23f3'}</td>
         <td><button type="button" class="mini edit" data-td="toggle">${t.statut === 'valide' ? '\u23f3 D\u00e9valider' : '\u2705 Valider'}</button> <button type="button" class="mini no" data-td="del">\u{0001F5D1}</button></td>
       </tr>`).join('') + '</tbody>';
@@ -1067,7 +1125,8 @@ async function printSheet(day) {
     (data || []).forEach((r) => { (parts[r.arbre_id] = parts[r.arbre_id] || []).push(r); });
   }
   const matLbl = { besoin_echelle: '🪜 échelle', besoin_caisses: '🧺 caisses', besoin_rateau: '🪮 râteau', besoin_bache: '🥅 bâche ou filet' };
-  const dateTxt = harvestDates[day] ? new Date(harvestDates[day] + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+  const jd = joursRows.find((x) => x.numero === day);
+  const dateTxt = jd && jd.date ? new Date(jd.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   const el = document.getElementById('print-sheet');
   el.innerHTML =
     `<h1>🫒 Cueillette collective — Jour ${day}${dateTxt ? ` — ${dateTxt}` : ''}</h1>` +
@@ -1094,20 +1153,29 @@ document.getElementById('btn-save-info').addEventListener('click', async () => {
   if (!isAdminUser) { toast('\u26D4 R\u00e9serv\u00e9 aux administrateurs.', false); return; }
   const v = document.getElementById('event-text').value.trim();
   const now = new Date().toISOString();
-  const rowsUps = [
-    { cle: 'rdv', valeur: v, maj_le: now },
-    { cle: 'jour1', valeur: document.getElementById('event-jour1').value || '', maj_le: now },
-    { cle: 'jour2', valeur: document.getElementById('event-jour2').value || '', maj_le: now },
-  ];
-  const { error } = await sb.from('infos').upsert(rowsUps, { onConflict: 'cle' });
-  if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
+  const { error: eInf } = await sb.from('infos').upsert([{ cle: 'rdv', valeur: v, maj_le: now }], { onConflict: 'cle' });
+  if (eInf) { toast('\u26A0\uFE0F ' + eInf.message, false); return; }
+  document.querySelectorAll('#jours-list [data-jd]').forEach((inp) => {
+    const j = joursRows.find((x) => x.numero === Number(inp.dataset.jd));
+    if (j) j.date = inp.value || null;
+  });
+  for (const n of joursRemoved) {
+    const { error: eU } = await sb.from('arbres').update({ jour: null }).eq('jour', n);
+    if (eU) { toast('\u26A0\uFE0F ' + eU.message, false); return; }
+    const { error: eJ } = await sb.from('jours').delete().eq('numero', n);
+    if (eJ) { toast('\u26A0\uFE0F ' + eJ.message, false); return; }
+  }
+  joursRemoved = [];
+  for (const j of joursRows) {
+    const { error } = await sb.from('jours').upsert({ numero: j.numero, date: j.date });
+    if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
+  }
   sessionStorage.removeItem('olivemap_banner_ok');
   loadEventBanner();
-  toast(v ? '📢 Annonce enregistr\u00e9e.' : '🗑 Annonce effac\u00e9e.');
+  renderSheetButtons();
+  render();
+  toast('📢 Annonce et jours enregistr\u00e9s.');
 });
-
-document.getElementById('btn-sheet1').addEventListener('click', () => printSheet(1));
-document.getElementById('btn-sheet2').addEventListener('click', () => printSheet(2));
 
 document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
 

@@ -251,6 +251,17 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 4px 0; font-size: 13px;
 }
+.day-filters { display: inline-flex; gap: 6px; }
+.jour-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; padding: 4px 0;
+}
+.jour-row .j-name { min-width: 96px; white-space: nowrap; }
+.jour-row input {
+  flex: 1; background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px; padding: 6px 8px;
+}
+
 .poi-row {
   display: flex; align-items: center; gap: 8px;
   font-size: 13px; padding: 6px 8px; margin-top: 4px;
@@ -283,7 +294,6 @@ html, body {
   transition: filter .15s;
 }
 .tree-icon svg { width: 100%; height: 100%; }
-.tree-icon.past { opacity: .4; filter: grayscale(1); }
 .tree-icon.pending { opacity: .45; }
 .tree-icon.done { box-shadow: 0 0 0 3px rgba(111, 224, 138, .55); border-radius: 50%; }
 .popup-actions { display: flex; gap: 8px; margin-top: 10px; }

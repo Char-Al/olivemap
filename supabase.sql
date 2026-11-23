@@ -240,3 +240,40 @@ grant insert, update, delete on public.pois to authenticated;
 
 -- Les points logistiques ne vivent plus dans la table arbres :
 alter table public.arbres drop column if exists poi;
+
+-- ============================================================
+-- 12) JOURS DE CUEILLETTE N : table « jours »
+--     (les dates vivent sur les jours, plus sur les arbres)
+-- ============================================================
+create table if not exists public.jours (
+  numero smallint primary key,
+  date date
+);
+alter table public.jours enable row level security;
+
+drop policy if exists "lecture publique des jours" on public.jours;
+create policy "lecture publique des jours"
+  on public.jours for select
+  using (true);
+
+drop policy if exists "admins gèrent les jours" on public.jours;
+create policy "admins gèrent les jours"
+  on public.jours for all
+  to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+grant select on public.jours to anon, authenticated;
+grant insert, update, delete on public.jours to authenticated;
+
+-- Jours 1 et 2 par défaut + reprise des dates stockées dans « infos »
+insert into public.jours (numero)
+  select s.n from unnest(array[1, 2]) as s(n)
+  on conflict (numero) do nothing;
+
+update public.jours set date = nullif((select valeur from public.infos where cle = 'jour1'), '')
+  where numero = 1 and date is null;
+update public.jours set date = nullif((select valeur from public.infos where cle = 'jour2'), '')
+  where numero = 2 and date is null;
+
+-- La date ne vit plus sur l'arbre :
+alter table public.arbres drop column if exists ramassage;

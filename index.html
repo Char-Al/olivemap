@@ -20,9 +20,8 @@
   <div class="topbar">
     <div class="brand"><span class="dot">●</span><span class="title">Olivemap</span></div>
     <div class="controls">
-      <button id="btn-filter-open" class="btn" title="Afficher uniquement les arbres dont le ramassage est prévu (ou jamais réalisé)">🚚 À ramasser</button>
-      <button id="btn-jour1" class="btn" title="Ne montrer que les arbres du Jour 1">🟠 Jour 1</button>
-      <button id="btn-jour2" class="btn" title="Ne montrer que les arbres du Jour 2">🔵 Jour 2</button>
+      <button id="btn-filter-open" class="btn" title="Ne montrer que les arbres pas encore ramassés">🚚 À ramasser</button>
+      <div id="jour-filters" class="day-filters"></div>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-install" class="btn" title="Installer Olivemap sur ton appareil" style="display:none">📲 Installer</button>
       <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
@@ -110,13 +109,7 @@
                 <label>Jour de cueillette (admins)</label>
                 <select id="f-jour">
                   <option value="">Peu importe</option>
-                  <option value="1">Jour 1</option>
-                  <option value="2">Jour 2</option>
                 </select>
-              </div>
-              <div>
-                <label>Date de ramassage (admins)</label>
-                <input id="f-ramassage" type="datetime-local" />
               </div>
             </div>
             <div class="check-row"><input type="checkbox" id="f-echelle" /><span>🪜 Échelle nécessaire</span></div>
@@ -152,24 +145,16 @@
         <div id="event-admin" style="display:none">
           <label>Annonce (rendez-vous / consignes, vide = aucune)</label>
           <textarea id="event-text" rows="3" placeholder="Samedi 9h — place du village…"></textarea>
-          <div class="row2">
-            <div>
-              <label>Date Jour 1</label>
-              <input id="event-jour1" type="date" />
-            </div>
-            <div>
-              <label>Date Jour 2</label>
-              <input id="event-jour2" type="date" />
-            </div>
+          <label>Jours de cueillette (dates modifiables)</label>
+          <div id="jours-list"></div>
+          <div class="modal-actions" style="margin-top:6px">
+            <button type="button" class="mini edit" id="btn-jour-add">➕ Ajouter un jour</button>
           </div>
-          <button type="button" class="mini ok" id="btn-save-info">📢 Enregistrer l'annonce</button>
+            <button type="button" class="mini ok" id="btn-save-info">💾 Enregistrer l’annonce et les jours</button>
         </div>
         <div id="sheet-admin" style="display:none">
           <label>Feuille d'équipe (impression)</label>
-          <div class="modal-actions" style="margin-top:6px">
-            <button type="button" class="mini edit" id="btn-sheet1">🖨️ Jour 1</button>
-            <button type="button" class="mini edit" id="btn-sheet2">🖨️ Jour 2</button>
-          </div>
+          <div class="modal-actions" id="sheet-jours" style="margin-top:6px"></div>
         </div>
         <div id="poi-admin" style="display:none">
           <h3>Points logistiques</h3>
