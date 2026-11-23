@@ -396,9 +396,11 @@ function beginAddAt(latlng) {
   openFormAt();
 }
 
-document.getElementById('btn-choice-arbre').addEventListener('click', () => openFormAt());
+const btnChoiceArbre = document.getElementById('btn-choice-arbre');
+if (btnChoiceArbre) btnChoiceArbre.addEventListener('click', () => openFormAt());
 
-document.getElementById('btn-choice-poi').addEventListener('click', () => {
+const btnChoicePoi = document.getElementById('btn-choice-poi');
+if (btnChoicePoi) btnChoicePoi.addEventListener('click', () => {
   fillPoiType();
   pendingPoi = pendingCoords;
   pendingCoords = null;
@@ -1605,6 +1607,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 const btnInstall = document.getElementById('btn-install');
+if (btnInstall) {
 if (!isStandalone()) {
   btnInstall.style.display = '';
 }
@@ -1628,3 +1631,4 @@ window.addEventListener('appinstalled', () => {
   deferredInstall = null;
   btnInstall.style.display = 'none';
 });
+}
