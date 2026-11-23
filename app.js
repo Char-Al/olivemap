@@ -22,7 +22,7 @@ const map = L.map('map', { zoomControl: false }).setView(DEFAULT_VIEW.center, DE
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> \u00b7 <a href="https://leafletjs.com/">Leaflet</a> \u00b7 contour: <a href="https://geoservices.ign.fr/adminexpress">IGN</a>'
 }).addTo(map);
 const zoneStyle = { color: '#ffb020', weight: 3, dashArray: '10 8', fillOpacity: 0.05 };
 let zonePoly = null;
