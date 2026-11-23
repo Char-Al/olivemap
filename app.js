@@ -256,6 +256,7 @@ function render() {
     : `<b>${feats.length}</b>/${allFeatures.length}`;
   renderJourFilters();
   updatePendingAlert();
+  updateJourSummary();
 }
 
 function updatePendingAlert() {
@@ -327,6 +328,7 @@ async function load() {
   }
 
   render();
+  loadJourSummary();
 }
 
 document.getElementById('legend-particulier').addEventListener('click', () => {
@@ -833,6 +835,7 @@ async function loadParticipations(id, zone, jour) {
       if (err) { toast('⚠️ ' + err.message, false); return; }
       toast('❌ Volontaire retiré.');
       loadParticipations(id, zone, jour);
+      loadJourSummary();
     });
   });
   const go = zone.querySelector('[data-part-go]');
@@ -846,6 +849,7 @@ async function loadParticipations(id, zone, jour) {
     localStorage.setItem('olivemap_pseudo', pseudo);
     toast(`🙋 ${pseudo} · ${nb} inscrit${nb > 1 ? 's' : ''} pour la cueillette !`);
     loadParticipations(id, zone, jour);
+    loadJourSummary();
   });
 }
 
@@ -938,6 +942,60 @@ function renderJourFilters() {
     });
     c.appendChild(b);
   });
+}
+
+let jourPartic = [];
+
+function jourSupplyFor(rows) {
+  const supply = { echelle: 0, caisses: 0, rateau: 0, bache: 0 };
+  (rows || []).forEach((r) => String(r.apporte || '').split(',').map((t) => t.trim()).forEach((k) => { if (k in supply) supply[k] += 1; }));
+  return supply;
+}
+
+function updateJourSummary() {
+  const c = document.getElementById('jours-summary');
+  if (!c) return;
+  if (!joursRows.length) { c.style.display = 'none'; return; }
+  const L = { echelle: '🪜', caisses: '🧺', rateau: '🪮', bache: '🥅' };
+  const valid = allFeatures.map((f) => f.properties || {}).filter((p) => p.id && p.statut !== 'attente');
+  const rows = ordonneJours().map((j) => {
+    const pos = jourPos(j);
+    const trees = valid.filter((p) => p.jour === j.numero);
+    const ids = new Set(trees.map((p) => p.id));
+    const parts = jourPartic.filter((r) => ids.has(r.arbre_id));
+    const vol = parts.reduce((acc, r) => acc + (Number(r.nb_personnes) || 1), 0);
+    const supply = jourSupplyFor(parts);
+    const need = { echelle: 0, caisses: 0, rateau: 0, bache: 0 };
+    trees.forEach((p) => {
+      if (p.ramasse) return;
+      if (p.besoin_echelle) need.echelle += 1;
+      if (p.besoin_caisses) need.caisses += 1;
+      if (p.besoin_rateau) need.rateau += 1;
+      if (p.besoin_bache) need.bache += 1;
+    });
+    const manq = Object.keys(need)
+      .filter((k) => need[k] > supply[k])
+      .map((k) => (need[k] - supply[k]) + ' \u00d7 ' + L[k])
+      .join(', ');
+    let bits = '<b>Jour ' + pos + '</b>' + dayDateTxt(j.numero, true) + ' \u00b7 ' + dayEmoji(pos) + ' 🌳 ' + trees.length + ' \u00b7 👥 ' + vol;
+    if (manq) bits += ' \u00b7 <span class="js-lack">\u26a0\ufe0f ' + manq + '</span>';
+    return '<div class="js-row' + (dayFilter === j.numero ? ' active' : '') + '" data-js="' + j.numero + '" title="Ne montrer que les arbres du Jour ' + pos + '">' + bits + '</div>';
+  });
+  c.innerHTML = rows.join('');
+  c.style.display = 'flex';
+  c.querySelectorAll('[data-js]').forEach((row) => {
+    row.addEventListener('click', () => {
+      dayFilter = dayFilter === Number(row.dataset.js) ? null : Number(row.dataset.js);
+      render();
+    });
+  });
+}
+
+async function loadJourSummary() {
+  if (!sb) return;
+  const { data } = await sb.from('participations').select('arbre_id, nb_personnes, apporte');
+  jourPartic = data || [];
+  updateJourSummary();
 }
 
 function fillJourSelect() {
