@@ -401,3 +401,11 @@ html, body {
 .legend-poi-toggle { cursor: pointer; user-select: none; border-radius: 999px; padding: 3px 10px; opacity: .6; transition: opacity .15s; }
 .legend-poi-toggle.active { opacity: 1; background: #4a3b1f; color: #ffd98a; }
 .swatch-poi { margin-right: 6px; }
+
+.pending-alert {
+  position: absolute; top: 54px; right: 12px; z-index: 1100;
+  background: #4a3b1f; border: 1px solid #ffb020; color: #ffd98a;
+  border-radius: 999px; padding: 7px 14px; font-size: 12px;
+  cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+.pending-alert:hover { filter: brightness(1.1); }

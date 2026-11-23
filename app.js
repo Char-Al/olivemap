@@ -229,7 +229,24 @@ function render() {
     ? `<b>📍</b> ${poiMarkers.length} point${poiMarkers.length > 1 ? 's' : ''}`
     : `<b>${feats.length}</b>/${allFeatures.length}`;
   renderJourFilters();
+  updatePendingAlert();
 }
+
+function updatePendingAlert() {
+  const b = document.getElementById('pending-alert');
+  if (!b) return;
+  const n = isAdminUser ? allFeatures.filter((f) => (f.properties || {}).statut === 'attente').length : 0;
+  b.textContent = n ? `⏳ ${n} demande${n > 1 ? 's' : ''} en attente` : '';
+  b.style.display = n ? 'block' : 'none';
+}
+
+document.getElementById('pending-alert').addEventListener('click', async () => {
+  if (!isAdminUser) return;
+  showStep('admin');
+  await loadAdminPanel();
+  const pl = document.getElementById('pending-list');
+  if (pl && pl.scrollIntoView) pl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 function toast(html, autohide = true) {
   const el = document.getElementById('toast');
