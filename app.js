@@ -1120,7 +1120,7 @@ document.getElementById('btn-share-wa').addEventListener('click', () => {
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
 });
 
-document.getElementById('legend-list').addEventListener('click', () => {
+document.getElementById('btn-list').addEventListener('click', () => {
   renderTreeView();
   showStep('list');
 });
