@@ -439,6 +439,7 @@ async function loadPois() {
     m.addTo(map);
     poiMarkers.push(m);
   });
+  render();
 }
 
 async function loadPoisAdmin() {
