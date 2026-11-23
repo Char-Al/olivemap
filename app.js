@@ -1544,30 +1544,38 @@ bootAdmin.finally(() => {
 });
 
 let deferredInstall = null;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredInstall = e;
-  if (!window.matchMedia('(display-mode: standalone)').matches) {
-    document.getElementById('btn-install').style.display = '';
+  if (!isStandalone()) {
+    btnInstall.style.display = '';
   }
 });
 
-document.getElementById('btn-install').addEventListener('click', async () => {
-  if (!deferredInstall) return;
-  deferredInstall.prompt();
-  const { outcome } = await deferredInstall.userChoice;
-  if (outcome === 'accepted') toast('📲 Olivemap installé !');
-  deferredInstall = null;
-  document.getElementById('btn-install').style.display = 'none';
+const btnInstall = document.getElementById('btn-install');
+if (!isStandalone()) {
+  btnInstall.style.display = '';
+}
+btnInstall.addEventListener('click', async () => {
+  if (deferredInstall) {
+    deferredInstall.prompt();
+    const { outcome } = await deferredInstall.userChoice;
+    if (outcome === 'accepted') toast('\U0001F4F2 Olivemap install\u00e9 !');
+    deferredInstall = null;
+    btnInstall.style.display = 'none';
+    return;
+  }
+  if (isIos) {
+    toast('\U0001F4F2 Sur iPhone, l\u2019installation passe par Safari : ouvre Olivemap dans <strong>Safari</strong>, touche \u2b06\ufe0f <strong>Partager</strong> puis \u00ab Sur l\u2019\u00e9cran d\u2019accueil \u00bb.', true);
+  } else {
+    toast('\U0001F4F2 Ce navigateur (par ex. DuckDuckGo) ne permet pas d\u2019installer l\u2019appli. Ouvre Olivemap dans <strong>Chrome</strong> : menu \u22ee \u2192 \u00ab Installer l\u2019application \u00bb.', true);
+  }
 });
 
 window.addEventListener('appinstalled', () => {
   deferredInstall = null;
-  document.getElementById('btn-install').style.display = 'none';
+  btnInstall.style.display = 'none';
 });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
-  });
-}
