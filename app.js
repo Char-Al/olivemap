@@ -224,8 +224,9 @@ function render() {
           if (error) { toast('⚠️ ' + error.message, false); return; }
           marker.closePopup();
           toast(v ? `✅ « ${esc(f.properties.nom)} » marqué ramassé.` : `↩️ « ${esc(f.properties.nom)} » à nouveau à faire.`);
-          if (isAdminUser) loadAdminPanel();
           await load();
+          if (isAdminUser) loadAdminPanel();
+          openTreeById(f.properties.id);
         });
         const btnDel = el.querySelector('[data-act="del"]');
         if (btnDel) btnDel.addEventListener('click', async () => {
