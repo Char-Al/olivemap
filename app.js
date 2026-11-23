@@ -24,10 +24,35 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
-const zoneCircle = L.circle([ZONE.lat, ZONE.lng], {
+const zoneStyle = { color: '#ffb020', weight: 3, dashArray: '10 8', fillOpacity: 0.05 };
+let zonePoly = null;
+let zoneLayer = L.circle([ZONE.lat, ZONE.lng], {
   radius: ZONE.km * 1000,
-  color: '#ffb020', weight: 3, dashArray: '10 8', fillOpacity: 0.05,
+  color: zoneStyle.color, weight: zoneStyle.weight, dashArray: zoneStyle.dashArray, fillOpacity: zoneStyle.fillOpacity,
 }).addTo(map);
+fetch('limite-claret.geojson').then((r) => r.json()).then((data) => {
+  const f = (data.features || [])[0];
+  if (!f || !f.geometry || !f.geometry.coordinates) return;
+  zonePoly = f.geometry.coordinates;
+  map.removeLayer(zoneLayer);
+  zoneLayer = L.polygon(zonePoly.map((ring) => ring.map((c) => [c[1], c[0]])), zoneStyle).addTo(map);
+}).catch(() => { /* le cercle 3 km reste affiché */ });
+
+function inRing(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function inClaret(lng, lat) {
+  if (!zonePoly) return map.distance([lat, lng], [ZONE.lat, ZONE.lng]) <= ZONE.km * 1000;
+  if (!inRing(lng, lat, zonePoly[0])) return false;
+  for (let i = 1; i < zonePoly.length; i++) { if (inRing(lng, lat, zonePoly[i])) return false; }
+  return true;
+}
 
 const stateLabels = { 'bon': 'Bon état', 'moyen': 'Moyen', 'mauvais': 'Mauvais état' };
 let markers = [];
@@ -622,8 +647,8 @@ let pendingPoi = null;
 
 map.on('click', async (e) => {
   if (placingPoi) {
-    if (map.distance(e.latlng, L.latLng(ZONE.lat, ZONE.lng)) > ZONE.km * 1000) {
-      toast(`\u26a0\ufe0f Trop loin du village \u2014 limit\u00e9 \u00e0 ${ZONE.km} km autour de Claret.`, false);
+    if (!inClaret(e.latlng.lng, e.latlng.lat)) {
+      toast(`⚠️ Hors du territoire de Claret — place le point dans la limite communale.`, false);
       return;
     }
     placingPoi = false;
@@ -636,9 +661,9 @@ map.on('click', async (e) => {
     return;
   }
   if (!addMode) return;
-  if (map.distance(e.latlng, L.latLng(ZONE.lat, ZONE.lng)) > ZONE.km * 1000) {
+  if (!inClaret(e.latlng.lng, e.latlng.lat)) {
     toggleAdd(false);
-    toast(`⚠️ Trop loin du village — les propositions sont limitées à ${ZONE.km} km autour de Claret.`, false);
+    toast(`⚠️ Trop loin du village — les propositions sont limitées au territoire de Claret.`, false);
     return;
   }
   toggleAdd(false);
