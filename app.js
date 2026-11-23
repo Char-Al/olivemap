@@ -220,7 +220,7 @@ function render() {
     marker.addTo(map);
   });
   document.getElementById('counter').innerHTML =
-    `<b>${feats.length}</b> arbre${feats.length > 1 ? 's' : ''} sur ${allFeatures.length}`;
+    `<b>${feats.length}</b>/${allFeatures.length}`;
 }
 
 function toast(html, autohide = true) {
