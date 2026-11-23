@@ -448,3 +448,5 @@ html, body {
 }
 .legend-fold:hover { color: var(--text); }
 .legend-body { display: contents; }
+.popup-details summary { cursor: pointer; user-select: none; color: var(--accent); font-size: 12px; }
+.popup-details dl { margin-top: 6px; }
