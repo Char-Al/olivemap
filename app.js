@@ -508,7 +508,7 @@ function setFormMode(target) {
 }
 
 function showStep(name) {
-  ['form', 'login', 'admin', 'poi'].forEach((s) => {
+  ['form', 'login', 'admin', 'poi', 'list'].forEach((s) => {
     document.getElementById(`step-${s}`).classList.toggle('visible', s === name);
   });
   document.getElementById('modal-overlay').classList.add('visible');
@@ -996,6 +996,58 @@ function renderQr() {
   }
 }
 
+function treeListItems() {
+  const showM = document.getElementById('legend-mairie').classList.contains('active');
+  const showP = document.getElementById('legend-particulier').classList.contains('active');
+  return allFeatures.filter((f) => {
+    const p = f.properties || {};
+    if ((p.statut === 'attente') && !isAdminUser) return false;
+    if (p.type === 'mairie' && !showM) return false;
+    if (p.type === 'particulier' && !showP) return false;
+    if (dayFilter && p.jour !== dayFilter) return false;
+    return true;
+  });
+}
+
+function renderTreeView() {
+  const box = document.getElementById('list-content');
+  if (!box) return;
+  const items = treeListItems();
+  if (!items.length) { box.innerHTML = '<div class="hint">Aucun arbre \u00e0 afficher.</div>'; return; }
+  const byJour = new Map();
+  items.forEach((f) => {
+    const k = (f.properties || {}).jour || 0;
+    if (!byJour.has(k)) byJour.set(k, []);
+    byJour.get(k).push(f);
+  });
+  const order = ordonneJours().map((j) => j.numero).filter((n) => byJour.has(n));
+  if (byJour.has(0)) order.push(0);
+  box.innerHTML = '';
+  order.forEach((n) => {
+    const lst = byJour.get(n);
+    const done = lst.filter((f) => (f.properties || {}).ramasse).length;
+    const g = document.createElement('div');
+    g.className = 'list-group';
+    const head = n
+      ? `${dayEmoji(jourPos(ordonneJours().find((x) => x.numero === n)))} Jour ${jourPos(ordonneJours().find((x) => x.numero === n))}${dayDateTxt(n)}`
+      : 'Sans jour';
+    g.innerHTML = `<div class="list-jour">${head} \u00b7 <span class="list-cnt">\u2705 ${done}/${lst.length}</span></div>`;
+    lst.forEach((f) => {
+      const p = f.properties || {};
+      const row = document.createElement('div');
+      row.className = 'list-row' + (p.ramasse ? ' done' : '') + (p.statut === 'attente' ? ' pending' : '');
+      row.title = 'Voir cet arbre sur la carte';
+      row.innerHTML = `<span class="lr-name">${p.statut === 'attente' ? '\u23f3 ' : ''}${esc(p.nom || 'Arbre')}</span>` +
+        `${ownerBadge(p.type) || ''}` +
+        `${p.production ? productionDots(p.production) : ''}` +
+        `${p.ramasse ? '\u2705' : '\u2b1c'}`;
+      if (p.id) row.addEventListener('click', () => { hideModal(); openTreeById(p.id); });
+      g.appendChild(row);
+    });
+    box.appendChild(g);
+  });
+}
+
 let jourPartic = [];
 
 function jourSupplyFor(rows) {
@@ -1066,6 +1118,11 @@ document.getElementById('btn-share-wa').addEventListener('click', () => {
   const url = location.origin + location.pathname;
   const text = '🫚 Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective : ' + url;
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+});
+
+document.getElementById('legend-list').addEventListener('click', () => {
+  renderTreeView();
+  showStep('list');
 });
 
 document.getElementById('btn-share-copy').addEventListener('click', async () => {
