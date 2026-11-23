@@ -751,20 +751,37 @@ async function fetchWeather() {
   } catch (err) { /* widget caché si hors-ligne / API injoignable */ }
 }
 
+const harvestDates = { 1: null, 2: null };
+
 async function loadEventBanner() {
   const banner = document.getElementById('event-banner');
   if (!sb) { banner.style.display = 'none'; return; }
-  const { data, error } = await sb.from('infos').select('valeur').eq('cle', 'rdv').maybeSingle();
-  if (error || !data || !data.valeur) { banner.style.display = 'none'; return; }
-  if (sessionStorage.getItem('olivemap_banner_ok') === data.valeur) { banner.style.display = 'none'; return; }
+  const { data, error } = await sb.from('infos').select('cle, valeur').in('cle', ['rdv', 'jour1', 'jour2']);
+  if (error) { banner.style.display = 'none'; return; }
+  const info = Object.fromEntries((data || []).map((r) => [r.cle, r.valeur]));
+  harvestDates[1] = (info.jour1 || '').slice(0, 10) || null;
+  harvestDates[2] = (info.jour2 || '').slice(0, 10) || null;
+  if (!info.rdv || sessionStorage.getItem('olivemap_banner_ok') === info.rdv) { banner.style.display = 'none'; return; }
   banner.innerHTML =
-    '<span class="eb-text">📢 ' + esc(data.valeur).replace(/\n/g, '<br/>') + '</span>' +
+    '<span class="eb-text">📢 ' + esc(info.rdv).replace(/\n/g, '<br/>') + '</span>' +
     '<button class="eb-close" id="eb-close">✕</button>';
   banner.style.display = 'block';
   document.getElementById('eb-close').addEventListener('click', () => {
     banner.style.display = 'none';
-    sessionStorage.setItem('olivemap_banner_ok', data.valeur);
+    sessionStorage.setItem('olivemap_banner_ok', info.rdv);
   });
+  const iso = new Date().toISOString().slice(0, 10);
+  const tod = harvestDates[1] === iso ? 1 : (harvestDates[2] === iso ? 2 : null);
+  if (tod) {
+    const b1 = document.getElementById('btn-jour1');
+    const b2 = document.getElementById('btn-jour2');
+    if (!b1.classList.contains('active') && !b2.classList.contains('active')) {
+      document.getElementById('btn-jour' + tod).classList.add('active');
+      visibleFeatures();
+      render();
+      toast(`📢 C'est aujourd'hui : Jour ${tod} — filtre activé.`);
+    }
+  }
 }
 
 async function loadAdminPanel() {
@@ -774,8 +791,11 @@ async function loadAdminPanel() {
   evAdm.style.display = isAdminUser ? '' : 'none';
   if (isAdminUser) {
     const et = document.getElementById('event-text');
-    const { data: info } = await sb.from('infos').select('valeur').eq('cle', 'rdv').maybeSingle();
-    if (document.activeElement !== et) et.value = (info && info.valeur) || '';
+    const { data: infoRows } = await sb.from('infos').select('cle, valeur').in('cle', ['rdv', 'jour1', 'jour2']);
+    const info = Object.fromEntries((infoRows || []).map((r) => [r.cle, r.valeur]));
+    if (document.activeElement !== et) et.value = info.rdv || '';
+    if (document.activeElement !== document.getElementById('event-jour1')) document.getElementById('event-jour1').value = info.jour1 || '';
+    if (document.activeElement !== document.getElementById('event-jour2')) document.getElementById('event-jour2').value = info.jour2 || '';
   }
   const pl = document.getElementById('pending-list');
   const al = document.getElementById('admins-list');
@@ -939,7 +959,13 @@ document.getElementById('btn-signout').addEventListener('click', async () => {
 document.getElementById('btn-save-info').addEventListener('click', async () => {
   if (!isAdminUser) { toast('\u26D4 R\u00e9serv\u00e9 aux administrateurs.', false); return; }
   const v = document.getElementById('event-text').value.trim();
-  const { error } = await sb.from('infos').upsert({ cle: 'rdv', valeur: v, maj_le: new Date().toISOString() }, { onConflict: 'cle' });
+  const now = new Date().toISOString();
+  const rowsUps = [
+    { cle: 'rdv', valeur: v, maj_le: now },
+    { cle: 'jour1', valeur: document.getElementById('event-jour1').value || '', maj_le: now },
+    { cle: 'jour2', valeur: document.getElementById('event-jour2').value || '', maj_le: now },
+  ];
+  const { error } = await sb.from('infos').upsert(rowsUps, { onConflict: 'cle' });
   if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
   sessionStorage.removeItem('olivemap_banner_ok');
   loadEventBanner();
