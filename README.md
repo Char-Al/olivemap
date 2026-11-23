@@ -6,7 +6,7 @@ Carte interactive d'arbres avec leurs informations — 100 % statique, hébergé
 - **2 couleurs de points** : vert = arbre d'un particulier, bleu = arbre de la mairie
 - **Rendement 1→3** (●○○) affiché dans le popup, le survol et la légende — et le marqueur affiche **1, 2 ou 3 olives 🫒** selon le rendement, visible d'un coup d'œil sur la carte
 - **Filtres cliquables dans la légende** : un clic sur « Particulier » ou « Mairie » masque/affiche chaque type de point (les deux actifs par défaut), et le bouton 🚚 « À ramasser » isole les arbres pas encore ramassés
-- **Proposition d'un arbre par n'importe quel visiteur** (bouton 🙋) : le point part dans la base Supabase et attend la validation d'un admin
+- **Proposition d'un arbre par n'importe quel visiteur** (appui long 👉 sur la carte) : le point part dans la base Supabase et attend la validation d'un admin
 - Bouton de géolocalisation
 - Responsive, fonctionne sur mobile
 
@@ -16,7 +16,7 @@ Les 10 oliviers d'exemple sont placés à **Claret (34270)** autour du village.
 
 ## ☁️ Supabase — propositions ouvertes aux visiteurs
 
-Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans compte GitHub** : le point est enregistré dans une base Supabase avec le statut `attente`, puis affiché sur la carte dès que **tu le valides**.
+Un **appui long sur la carte** (ou un clic droit sur ordinateur) permet à n'importe qui de proposer un arbre **sans compte GitHub** : le point est enregistré dans une base Supabase avec le statut `attente`, puis affiché sur la carte dès que **tu le valides**.
 
 **Mise en place (une fois, ~2 min) :**
 
@@ -68,9 +68,13 @@ Pour ajouter **un autre admin** : crée d'abord son utilisateur dans *Authentica
 
 La sécurité est côté base (RLS) : un compte non-admin ne peut ni voir les demandes, ni valider, ni gérer la liste.
 
-## 🙋 Proposer un arbre depuis le site
+## 👉 Proposer un arbre / un point logistique depuis le site
 
-**Visiteurs (bouton 🙋)** : clic à l'endroit voulu sur la carte → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin. Les admins connectés la voient **immédiatement sur la carte** (point en pointillés), sans recharger la page.
+**Tout le monde** : appui long à l'endroit voulu sur la carte (clic droit « contextmenu » sur ordinateur) → formulaire (nom, propriétaire, rendement 1–3, espèce, dimensions, état, photo, notes) → la proposition part dans la base Supabase avec le statut `attente` et **n'apparaît publiquement qu'après validation** par un admin. Les admins connectés la voient **immédiatement sur la carte** (point en pointillés), sans recharger la page.
+
+Pour un **admin connecté**, l'appui long ouvre d'abord un choix :
+- 🫒 **Arbre** → même formulaire de proposition (statut `attente`, validable depuis la popup) ;
+- 📌 **Point logistique** → sélection du type (eau, bâches…) et création immédiate.
 
 Les admins peuvent ensuite **valider, modifier ou supprimer** chaque proposition directement depuis la popup de l'arbre sur la carte. Aucun jeton GitHub, aucune clé secrète dans le navigateur : tout passe par Supabase (clé *publishable*, publique par conception).
 
