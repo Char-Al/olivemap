@@ -462,7 +462,7 @@ function collectFormValues() {
   }
   if (addModeTarget !== 'propose') {
     const j = parseInt(document.getElementById('f-jour').value, 10);
-    if (j === 1 || j === 2) props.jour = j;
+    if (joursRows.some((x) => x.numero === j)) props.jour = j;
   }
   return props;
 }
