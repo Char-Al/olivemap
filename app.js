@@ -210,7 +210,7 @@ function render() {
         if (sh) sh.addEventListener('click', () => {
           const link = `${location.origin}${location.pathname}?arbre=${f.properties.id}`;
           navigator.clipboard.writeText(link)
-            .then(() => toast('\U0001F517 Lien copi\u00e9 \u2014 colle-le pour partager cet arbre.'))
+            .then(() => toast('🔗 Lien copi\u00e9 \u2014 colle-le pour partager cet arbre.'))
             .catch(() => toast(link, false));
         });
       });
@@ -899,7 +899,7 @@ document.getElementById('btn-save-info').addEventListener('click', async () => {
   if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
   sessionStorage.removeItem('olivemap_banner_ok');
   loadEventBanner();
-  toast(v ? '\U0001F4E2 Annonce enregistr\u00e9e.' : '\U0001F5D1 Annonce effac\u00e9e.');
+  toast(v ? '📢 Annonce enregistr\u00e9e.' : '🗑 Annonce effac\u00e9e.');
 });
 
 document.getElementById('btn-refresh-admin').addEventListener('click', loadAdminPanel);
