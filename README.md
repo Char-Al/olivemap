@@ -26,7 +26,7 @@ Le bouton **« 🙋 »** permet à n'importe qui de proposer un arbre **sans com
 
 **⭕ Zone de proposition** : les propositions (_visiteurs_ comme _admins_) sont **limitées à 3 km autour du village de Claret** — le cercle du périmètre autorisé est **affiché en permanence sur la carte** (pointillés jaunes, entrée « Limite de proposition » dans la légende). Le contrôle est aussi côté base : la policy RLS d'insertion refuse toute coordonnée hors de la zone (les lignes `lat between` / `lng between` de `supabase.sql`) — ajuste-les avec `ZONE` dans `index.html` si tu changes le périmètre.
 
-**🗓 Jours de cueillette** : les dates vivent sur des **jours de cueillette** créés par les admins (autant que nécessaire, table `jours`) — chaque arbre est rattaché (ou non) à un jour, la date ne se saisit jamais sur l'arbre.
+**🗓 Jours de cueillette** : les dates vivent sur des **jours de cueillette** créés par les admins (autant que nécessaire, table `jours`) — chaque arbre est rattaché (ou non) à un jour, la date ne se saisit jamais sur l'arbre. Les jours sont **numérotés automatiquement par ordre de date croissante** (les jours sans date en dernier) : ajouter, supprimer ou dater un jour re-numérote tout, et les arbres rattachés suivent.
 
 **🙋 Participations** : dans la popup de tout arbre validé, n'importe qui peut s'inscrire (« 🙋 Je viens ») avec son pseudo et un nombre de personnes. Le total et la liste apparaissent dans la popup. Nécessite la section 8 de `supabase.sql`.
 
@@ -40,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v31`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v32`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;

@@ -823,6 +823,17 @@ function dayDateTxt(n, long = false) {
   return ' — ' + new Date(j.date + 'T12:00:00').toLocaleDateString('fr-FR', long ? { weekday: 'long', day: 'numeric', month: 'long' } : { day: 'numeric', month: 'short' });
 }
 
+function ordonneJours() {
+  return [...joursRows].sort((a, b) => {
+    if (a.date && b.date) return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return a.numero - b.numero;
+  });
+}
+
+function jourPos(row) { return ordonneJours().indexOf(row) + 1; }
+
 async function loadJours() {
   if (!sb) return;
   const keep = ({ numero, date }) => ({ numero, date });
@@ -865,7 +876,7 @@ function fillJourSelect() {
   if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">Peu importe</option>' +
-    joursRows.map((j) => `<option value="${j.numero}">${dayEmoji(j.numero)} Jour ${j.numero}${dayDateTxt(j.numero)}</option>`).join('');
+    ordonneJours().map((j) => `<option value="${j.numero}">${dayEmoji(jourPos(j))} Jour ${jourPos(j)}${dayDateTxt(j.numero)}</option>`).join('');
   if ([...sel.options].some((o) => o.value === String(cur))) sel.value = String(cur);
 }
 
@@ -873,10 +884,11 @@ function renderJoursAdmin() {
   const list = document.getElementById('jours-list');
   if (!list) return;
   list.innerHTML = '';
-  joursRows.forEach((j) => {
+  ordonneJours().forEach((j) => {
+    const pos = jourPos(j);
     const row = document.createElement('div');
     row.className = 'jour-row';
-    row.innerHTML = `<span class="j-name">${dayEmoji(j.numero)} Jour ${j.numero}</span>` +
+    row.innerHTML = `<span class="j-name">${dayEmoji(pos)} Jour ${pos}</span>` +
       `<input type="date" value="${j.date || ''}" data-jd="${j.numero}" />` +
       `<button type="button" class="mini no" data-jr="${j.numero}" title="Supprimer ce jour">🗑</button>`;
     row.querySelector('[data-jr]').addEventListener('click', () => {
@@ -1159,6 +1171,11 @@ document.getElementById('btn-save-info').addEventListener('click', async () => {
     const j = joursRows.find((x) => x.numero === Number(inp.dataset.jd));
     if (j) j.date = inp.value || null;
   });
+
+  const ordered = ordonneJours();
+  const mapping = new Map();
+  ordered.forEach((j, i) => mapping.set(j.numero, i + 1));
+
   for (const n of joursRemoved) {
     const { error: eU } = await sb.from('arbres').update({ jour: null }).eq('jour', n);
     if (eU) { toast('\u26A0\uFE0F ' + eU.message, false); return; }
@@ -1166,12 +1183,37 @@ document.getElementById('btn-save-info').addEventListener('click', async () => {
     if (eJ) { toast('\u26A0\uFE0F ' + eJ.message, false); return; }
   }
   joursRemoved = [];
-  for (const j of joursRows) {
-    const { error } = await sb.from('jours').upsert({ numero: j.numero, date: j.date });
+
+  for (const [oldN, newN] of mapping) {
+    if (oldN === newN) continue;
+    const { error: e1 } = await sb.from('arbres').update({ jour: -oldN }).eq('jour', oldN);
+    if (e1) { toast('\u26A0\uFE0F ' + e1.message, false); return; }
+  }
+  for (const [oldN, newN] of mapping) {
+    if (oldN === newN) continue;
+    const { error: e2 } = await sb.from('arbres').update({ jour: newN }).eq('jour', -oldN);
+    if (e2) { toast('\u26A0\uFE0F ' + e2.message, false); return; }
+  }
+
+  const { data: dbJours, error: eR } = await sb.from('jours').select('numero').order('numero');
+  if (eR) { toast('\u26A0\uFE0F ' + eR.message, false); return; }
+  const existing = new Set((dbJours || []).map((r) => r.numero));
+  for (const n of existing) {
+    if (!mapping.has(n)) {
+      const { error } = await sb.from('jours').delete().eq('numero', n);
+      if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
+    }
+  }
+  for (const j of ordered) {
+    const { error } = await sb.from('jours').upsert({ numero: mapping.get(j.numero), date: j.date });
     if (error) { toast('\u26A0\uFE0F ' + error.message, false); return; }
   }
+  joursRows = ordered.map((j) => ({ numero: mapping.get(j.numero), date: j.date }));
+
   sessionStorage.removeItem('olivemap_banner_ok');
-  loadEventBanner();
+  renderJoursAdmin();
+  fillJourSelect();
+  renderJourFilters();
   renderSheetButtons();
   render();
   toast('📢 Annonce et jours enregistr\u00e9s.');
