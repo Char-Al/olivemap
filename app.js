@@ -64,7 +64,7 @@ function markerIcon(props, past) {
   const prod = Math.min(Math.max(parseInt(props.production, 10) || 1, 1), 3);
   return L.divIcon({
     className: 'tree-marker',
-    html: `<div class="tree-icon${past ? ' past' : ''}${pending ? ' pending' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+    html: `<div class="tree-icon${past ? ' past' : ''}${pending ? ' pending' : ''}${props.ramasse ? ' done' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
       <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="${color}" stroke-width="2"/>
       <circle cx="17" cy="38" r="2.4" fill="${color}"/>
       ${oliveGlyphs(prod)}
@@ -88,7 +88,7 @@ function ownerBadge(type) {
 function popupHtml(props, coords) {
   const rows = [];
   const actPending = props.statut === 'attente' && isAdminUser;
-  const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
+  const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="done">${props.ramasse ? '↩️ À faire' : '✔️ Ramassé'}</button><button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
   const geoLink = coords
     ? `<a class="mini edit" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}">🧭 Itinéraire</a>`
     : '';
@@ -112,6 +112,7 @@ function popupHtml(props, coords) {
     const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || esc(props.etat)}</span>`]);
   }
+  if (props.ramasse) rows.push(['Cueillette', '✅ Ramassé']);
   if (props.ramassage) {
     const d = new Date(props.ramassage);
     const past = d < new Date();
@@ -214,6 +215,16 @@ function render() {
           toast(`⏳ « ${esc(f.properties.nom)} » remis en attente — visible des admins uniquement.`);
           await load();
         });
+        const btnDone = el.querySelector('[data-act="done"]');
+        if (btnDone) btnDone.addEventListener('click', async () => {
+          const v = !f.properties.ramasse;
+          const { error } = await sb.from('arbres').update({ ramasse: v }).eq('id', f.properties.id);
+          if (error) { toast('⚠️ ' + error.message, false); return; }
+          marker.closePopup();
+          toast(v ? `✅ « ${esc(f.properties.nom)} » marqué ramassé.` : `↩️ « ${esc(f.properties.nom)} » à nouveau à faire.`);
+          if (isAdminUser) loadAdminPanel();
+          await load();
+        });
         const btnDel = el.querySelector('[data-act="del"]');
         if (btnDel) btnDel.addEventListener('click', async () => {
           const { error } = await sb.from('arbres').delete().eq('id', f.properties.id);
@@ -239,6 +250,12 @@ function render() {
   });
   document.getElementById('counter').innerHTML =
     `<b>${feats.length}</b>/${allFeatures.length}`;
+  const dayStats = (d) => {
+    const lst = allFeatures.map((f) => f.properties || {}).filter((p) => p.jour === d);
+    return lst.length ? ` (${lst.filter((p) => p.ramasse).length}/${lst.length})` : '';
+  };
+  document.getElementById('btn-jour1').textContent = `🟠 Jour 1${dayStats(1)}`;
+  document.getElementById('btn-jour2').textContent = `🔵 Jour 2${dayStats(2)}`;
 }
 
 function toast(html, autohide = true) {
