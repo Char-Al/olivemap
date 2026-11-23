@@ -110,6 +110,8 @@ function popupHtml(props, coords) {
   const shareRow = props.id && props.statut === 'valide'
     ? `<div class="popup-actions"><button class="mini edit" data-share>🔗 Partager l'arbre</button>${geoLink}</div>`
     : '';
+  const tech = isAdminUser ? rows : [];
+  if (!isAdminUser && props.espece) tech.push(['Esp\u00e8ce', esc(props.espece)]);
   if (props.statut === 'attente') rows.push(['Validation', '\u23f3 En attente \u2014 visible des admins uniquement']);
   if (props.type || props.production) {
     rows.push([
@@ -119,12 +121,12 @@ function popupHtml(props, coords) {
       `${props.production ? productionDots(props.production) : ''}`,
     ]);
   }
-  if (props.hauteur_m) rows.push(['Hauteur', `${props.hauteur_m} m`]);
-  if (props.circonference_cm) rows.push(['Circonférence', `${props.circonference_cm} cm`]);
-  if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
+  if (props.hauteur_m) tech.push(['Hauteur', `${props.hauteur_m} m`]);
+  if (props.circonference_cm) tech.push(['Circonférence', `${props.circonference_cm} cm`]);
+  if (props.annee_plantation) tech.push(['Planté en', props.annee_plantation]);
   if (props.etat) {
     const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    rows.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || esc(props.etat)}</span>`]);
+    tech.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || esc(props.etat)}</span>`]);
   }
   if (props.ramasse) rows.push(['Cueillette', '✅ Ramassé']);
   if (props.jour) rows.push([
@@ -142,15 +144,16 @@ function popupHtml(props, coords) {
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
     if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'].includes(k) && v != null && v !== '') {
-      rows.push([esc(k), esc(String(v))]);
+      tech.push([esc(k), esc(String(v))]);
     }
   }
   return `<div class="popup">
     <h3>${props.emoji ? esc(props.emoji) : (actPending ? '⏳' : '🫒')} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
-    ${props.espece ? `<div class="species">${esc(props.espece)}</div>` : ''}
+    ${isAdminUser && props.espece ? `<div class="species">${esc(props.espece)}</div>` : ''}
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
     ${props.notes ? `<div class="notes">${esc(props.notes)}</div>` : ''}
+    ${!isAdminUser && tech.length ? `<details class="popup-details"><summary>\u2139\ufe0f D\u00e9tails</summary><dl>${tech.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></details>` : ''}
     ${props.id && props.statut !== 'attente' && props.jour ? '<div class="part-zone" data-part></div>' : ''}
     ${actPending ? `
       <div class="popup-actions"><button class="mini ok" data-act="ok">\u2705 Valider</button><button class="mini no" data-act="no">\u{1F5D1} Rejeter</button></div>` : ''}
