@@ -40,7 +40,7 @@ Olivemap est installable comme une vraie application :
 - **iOS/Safari** : Partager → « Sur l'écran d'accueil » ;
 - **Desktop Chrome/Edge** : icône ⊕ dans la barre d'adresse.
 
-Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v21`) :
+Mode **hors-ligne** (service worker `sw.js`, cache `olivemap-v22`) :
 
 - l'interface (HTML/CSS/JS, Leaflet) est préchargée ;
 - la copie de sauvegarde `arbres.geojson` est mise en cache → combinée à la base de secours, la carte reste consultable sans réseau ;
@@ -115,6 +115,10 @@ Structure d'une entrée :
 - `ramassage` : date/heure prévue de ramassage, format `"AAAA-MM-JTHH:MM"` (p. ex. `"2026-12-15T09:30"`) — affichée 🚚 dans le popup ; **une fois la date passée, le marqueur devient grisé** (opacity réduite) et le popup affiche ✅ Ramassé
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
 - Pour une photo : héberge-la (p. ex. dans un dossier `photos/` du dépôt) et mets son URL
+
+## ☀️ Météo (Open-Meteo, sans clé)
+
+Une pilule discrète en bas à droite affiche les prévisions **3 jours** sur la zone (températures mini/maxi et probabilité de pluie) via [Open-Meteo](https://open-meteo.com/) — gratuit, sans clé API. Elle reste cachée si l'API est injoignable (hors-ligne).
 
 ## 🥊 Cueillette en 2 jours (Jour 1 / Jour 2)
 

@@ -676,6 +676,37 @@ async function loadParticipations(id, zone, quand) {
   });
 }
 
+function wmoIcon(c) {
+  if (c === 0) return '☀️';
+  if (c <= 2) return '🌤️';
+  if (c === 3) return '☁️';
+  if (c === 45 || c === 48) return '🌫️';
+  if (c >= 51 && c <= 67) return '🌦️';
+  if (c >= 71 && c <= 77) return '🌨️';
+  if (c >= 80 && c <= 82) return '🌧️';
+  if (c >= 95) return '⛈️';
+  return '☁️';
+}
+
+async function fetchWeather() {
+  const el = document.getElementById('weather');
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${ZONE.lat}&longitude=${ZONE.lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis&forecast_days=3`);
+    if (!r.ok) return;
+    const j = await r.json();
+    const d = j.daily;
+    if (!d || !d.time || !d.time.length) return;
+    el.innerHTML = d.time.map((t, i) => `
+      <div class="wd">
+        <span class="wl">${i === 0 ? 'Auj.' : new Date(t).toLocaleDateString('fr-FR', { weekday: 'short' })}</span>
+        <span class="wi">${wmoIcon(d.weather_code[i])}</span>
+        <b>${Math.round(d.temperature_2m_max[i])}°<span class="wmin">/${Math.round(d.temperature_2m_min[i])}°</span></b>
+        <span class="rain">💧 ${d.precipitation_probability_max[i] ?? 0}%</span>
+      </div>`).join('<span class="wsep"></span>');
+    el.style.display = 'flex';
+  } catch (err) { /* widget caché si hors-ligne / API injoignable */ }
+}
+
 async function loadEventBanner() {
   const banner = document.getElementById('event-banner');
   if (!sb) { banner.style.display = 'none'; return; }
@@ -885,6 +916,7 @@ function openTreeById(id) {
 
 bootAdmin.finally(() => {
   Promise.all([load(), loadEventBanner()]).then(() => {
+    fetchWeather();
     const wantedId = new URLSearchParams(location.search).get('arbre');
     if (wantedId) openTreeById(wantedId);
   });

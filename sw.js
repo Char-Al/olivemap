@@ -1,5 +1,5 @@
 /* Olivemap service worker — offline shell + tuiles OSM */
-const CACHE = 'olivemap-v21';
+const CACHE = 'olivemap-v22';
 const TILES = 'olivemap-tiles';
 
 const SHELL = [
@@ -38,6 +38,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
 
   if (url.hostname.endsWith('.supabase.co')) return;
+  if (url.hostname === 'api.open-meteo.com') return;
 
   if (url.hostname.endsWith('.tile.openstreetmap.org')) {
     event.respondWith(tileStrategy(req));
