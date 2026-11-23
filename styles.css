@@ -396,8 +396,6 @@ html, body {
   .legend { left: 8px; bottom: 8px; font-size: 10px; padding: 5px 10px; gap: 10px; }
 }
 
-.legend-poi-toggle { cursor: pointer; user-select: none; border-radius: 999px; padding: 3px 10px; opacity: .6; transition: opacity .15s; }
-.legend-poi-toggle.active { opacity: 1; background: #4a3b1f; color: #ffd98a; }
 .swatch-poi { margin-right: 6px; }
 
 .pending-alert {

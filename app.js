@@ -166,7 +166,6 @@ function visibleFeatures() {
   const showM = document.getElementById('legend-mairie').classList.contains('active');
   const showP = document.getElementById('legend-particulier').classList.contains('active');
   const op = document.getElementById('btn-filter-open').classList.contains('active');
-  if (poiOnly) return [];
   return allFeatures.filter((f) => {
     const p = f.properties || {};
     if (p.type === 'mairie' && !showM) return false;
@@ -254,14 +253,24 @@ function render() {
     markers.push({ marker, f });
     marker.addTo(map);
   });
+  updateLegendCounts();
+  renderJourFilters();
+  updatePendingAlert();
+  updateJourSummary();
+}
+
+function updateLegendCounts() {
+  const cnt = (t) => allFeatures.filter((f) => (f.properties || {}).type === t).length;
+  const cp = document.getElementById('legend-particulier');
+  if (cp) cp.innerHTML = '<span class="swatch" style="background:#7fb069"></span>Particulier (' + cnt('particulier') + ')';
+  const cm = document.getElementById('legend-mairie');
+  if (cm) cm.innerHTML = '<span class="swatch" style="background:#4a8fc7"></span>Mairie (' + cnt('mairie') + ')';
   const lp = document.getElementById('legend-poi');
   if (lp) {
     lp.style.display = poiMarkers.length ? '' : 'none';
     lp.innerHTML = '<span class="swatch-poi">📍</span>Logistique (' + poiMarkers.length + ')';
+    lp.classList.toggle('active', poiVisible);
   }
-  renderJourFilters();
-  updatePendingAlert();
-  updateJourSummary();
 }
 
 function updatePendingAlert() {
@@ -346,10 +355,11 @@ document.getElementById('legend-mairie').addEventListener('click', () => {
   document.getElementById('legend-mairie').classList.toggle('active');
   render();
 });
-let poiOnly = false;
+let poiVisible = true;
 document.getElementById('legend-poi').addEventListener('click', () => {
-  poiOnly = !poiOnly;
-  document.getElementById('legend-poi').classList.toggle('active', poiOnly);
+  poiVisible = !poiVisible;
+  document.getElementById('legend-poi').classList.toggle('active', poiVisible);
+  poiMarkers.forEach((m) => { if (poiVisible) m.addTo(map); else map.removeLayer(m); });
   render();
 });
 
@@ -510,7 +520,7 @@ async function loadPois() {
         loadPoisAdmin();
       });
     });
-    m.addTo(map);
+    if (poiVisible) m.addTo(map);
     poiMarkers.push(m);
   });
   render();
