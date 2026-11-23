@@ -373,6 +373,15 @@ function toggleAdd(on) {
 }
 let addModeTarget = 'propose';
 
+function openFormAt() {
+  const [lng, lat] = pendingCoords;
+  addModeTarget = 'propose';
+  setFormMode('propose');
+  document.getElementById('coords').textContent = `[${lng.toFixed(6)}, ${lat.toFixed(6)}]`;
+  document.getElementById('form-err').classList.remove('visible');
+  showStep('form');
+}
+
 function beginAddAt(latlng) {
   if (placingPoi) return;
   if (!inClaret(latlng.lng, latlng.lat)) {
@@ -380,12 +389,24 @@ function beginAddAt(latlng) {
     return;
   }
   pendingCoords = [latlng.lng, latlng.lat];
-  addModeTarget = 'propose';
-  setFormMode('propose');
-  document.getElementById('coords').textContent = `[${latlng.lng.toFixed(6)}, ${latlng.lat.toFixed(6)}]`;
-  document.getElementById('form-err').classList.remove('visible');
-  showStep('form');
+  if (isAdminUser) {
+    showStep('choice');
+    return;
+  }
+  openFormAt();
 }
+
+document.getElementById('btn-choice-arbre').addEventListener('click', () => openFormAt());
+
+document.getElementById('btn-choice-poi').addEventListener('click', () => {
+  fillPoiType();
+  pendingPoi = pendingCoords;
+  pendingCoords = null;
+  document.getElementById('poi-coords').textContent = `[${pendingPoi[0].toFixed(6)}, ${pendingPoi[1].toFixed(6)}]`;
+  document.getElementById('p-type').value = 'eau';
+  showStep('poi');
+});
+
 
 const LONG_PRESS_MS = 500;
 let pressTimer = null;
@@ -550,7 +571,7 @@ function setFormMode(target) {
 }
 
 function showStep(name) {
-  ['form', 'login', 'admin', 'poi', 'list'].forEach((s) => {
+  ['form', 'choice', 'login', 'admin', 'poi', 'list'].forEach((s) => {
     document.getElementById(`step-${s}`).classList.toggle('visible', s === name);
   });
   document.getElementById('modal-overlay').classList.add('visible');
