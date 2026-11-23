@@ -139,11 +139,6 @@ html, body {
 }
 .legend-toggle { cursor: pointer; user-select: none; transition: opacity .15s; }
 .legend-toggle:not(.active) { opacity: .35; text-decoration: line-through; }
-.swatch-zone {
-  display: inline-block; width: 10px; height: 10px;
-  border-radius: 50%; border: 2px dashed #ffb020; margin-right: 6px;
-  vertical-align: middle;
-}
 
 /* ---- Modale création ---- */
 .modal-overlay {

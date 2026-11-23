@@ -5,7 +5,7 @@ const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
 const POI = {
   eau: { emoji: '💧', label: "Point d'eau" },
   wc: { emoji: '🚻', label: 'WC' },
-  parking: { emoji: '🎫', label: 'Parking' },
+  parking: { emoji: '🚗', label: 'Parking' },
   accueil: { emoji: '🏠', label: 'Accueil / consignes' },
   pesee: { emoji: '⚖️', label: 'Pesée' },
 };
