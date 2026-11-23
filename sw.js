@@ -1,5 +1,5 @@
 /* Olivemap service worker — offline shell + tuiles OSM */
-const CACHE = 'olivemap-v48';
+const CACHE = 'olivemap-v49';
 const TILES = 'olivemap-tiles';
 
 const SHELL = [
@@ -15,6 +15,7 @@ const SHELL = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://unpkg.com/qrcode-generator@1.4.4/qrcode.js',
 ];
 
 self.addEventListener('install', (event) => {
