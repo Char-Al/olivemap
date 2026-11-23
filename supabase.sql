@@ -75,8 +75,8 @@ create policy "proposition publique sans date ni jour"
   to anon
   with check (
     statut = 'attente' and jour is null
-    and lat between 43.83 and 43.90
-    and lng between 3.86 and 3.95
+    and lat between 43.815 and 43.895
+    and lng between 3.825 and 3.928
   );
 
 create policy "creation d'arbres valides par les admins"
@@ -298,13 +298,8 @@ update public.jours set date = nullif((select valeur from public.infos where cle
 do $$
 begin
   drop policy if exists "proposition publique sans date de ramassage" on public.arbres;
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'arbres'
-      and policyname = 'proposition publique sans date ni jour'
-  ) then
-    execute 'create policy "proposition publique sans date ni jour" on public.arbres for insert to anon with check (statut = ''attente'' and jour is null and lat between 43.83 and 43.90 and lng between 3.86 and 3.95)';
-  end if;
+  drop policy if exists "proposition publique sans date ni jour" on public.arbres;
+  execute 'create policy "proposition publique sans date ni jour" on public.arbres for insert to anon with check (statut = ''attente'' and jour is null and lat between 43.815 and 43.895 and lng between 3.825 and 3.928)';
 end $$;
 
 alter table public.arbres drop column if exists ramassage;
