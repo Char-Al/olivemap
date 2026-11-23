@@ -2,6 +2,13 @@
 const DEFAULT_VIEW = { center: [43.8619, 3.9047], zoom: 16 };
 const OWNER_COLORS = { mairie: '#4a8fc7', particulier: '#7fb069' };
 const OWNER_LABELS = { mairie: 'Mairie', particulier: 'Particulier' };
+const POI = {
+  eau: { emoji: '💧', label: "Point d'eau" },
+  wc: { emoji: '🚻', label: 'WC' },
+  parking: { emoji: '🎫', label: 'Parking' },
+  accueil: { emoji: '🏠', label: 'Accueil / consignes' },
+  pesee: { emoji: '⚖️', label: 'Pesée' },
+};
 const ADMIN_EMAIL_DOMAIN = '@olivemap.claret';
 const ZONE = { lat: DEFAULT_VIEW.center[0], lng: DEFAULT_VIEW.center[1], km: 3 };
 const SUPABASE_URL = 'https://xubbwsvgvtmzrqnkdhug.supabase.co';
@@ -42,6 +49,16 @@ function oliveGlyphs(prod) {
 }
 
 function markerIcon(props, past) {
+  if (props.poi) {
+    const info = POI[props.poi] || { emoji: '📍' };
+    return L.divIcon({
+      className: 'tree-marker',
+      html: `<div class="poi-pin">${info.emoji}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -16],
+    });
+  }
   const color = OWNER_COLORS[props.type] || '#7fb069';
   const pending = props.statut === 'attente';
   const prod = Math.min(Math.max(parseInt(props.production, 10) || 1, 1), 3);
@@ -87,6 +104,7 @@ function popupHtml(props, coords) {
       `${props.production ? productionDots(props.production) : ''}`,
     ]);
   }
+  if (props.poi && POI[props.poi]) rows.push(['Fonction', POI[props.poi].label]);
   if (props.hauteur_m) rows.push(['Hauteur', `${props.hauteur_m} m`]);
   if (props.circonference_cm) rows.push(['Circonférence', `${props.circonference_cm} cm`]);
   if (props.annee_plantation) rows.push(['Planté en', props.annee_plantation]);
@@ -113,12 +131,12 @@ function popupHtml(props, coords) {
   if (props.kids_friendly) rows.push(['Famille', '👶 Adapté aux enfants']);
   if (props.acces_pieton) rows.push(['Accès', '🚶 🚷 Piéton uniquement']);
   for (const [k, v] of Object.entries(props)) {
-    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'].includes(k) && v != null && v !== '') {
+    if (!['nom', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'notes', 'photo', 'emoji', 'type', 'production', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'id', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache', 'poi'].includes(k) && v != null && v !== '') {
       rows.push([esc(k), esc(String(v))]);
     }
   }
   return `<div class="popup">
-    <h3>${props.emoji ? esc(props.emoji) : (actPending ? '⏳' : '🫒')} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
+    <h3>${props.poi ? ((POI[props.poi] || {}).emoji || '📍') : (props.emoji ? esc(props.emoji) : (actPending ? '⏳' : '🫒'))} ${esc(props.nom || 'Sans nom')}${actPending ? ' <span class="badge-wait">En attente</span>' : ''}</h3>
     ${props.espece ? `<div class="species">${esc(props.espece)}</div>` : ''}
     ${props.photo ? `<img src="${esc(props.photo)}" alt="${esc(props.nom || '')}" onerror="this.style.display='none'"/>` : ''}
     ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
@@ -143,8 +161,8 @@ function visibleFeatures() {
     const p = f.properties || {};
     if (p.type === 'mairie' && !showM) return false;
     if (p.type === 'particulier' && !showP) return false;
-    if (j1 && p.jour !== 1) return false;
-    if (j2 && p.jour !== 2) return false;
+    if (j1 && !p.poi && p.jour !== 1) return false;
+    if (j2 && !p.poi && p.jour !== 2) return false;
     if (op) {
       if (p.statut === 'attente') return false;
       if (p.ramassage && new Date(p.ramassage) < now) return false;
@@ -234,7 +252,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'ramassage', 'statut', 'jour', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache', 'poi'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
@@ -324,6 +342,7 @@ function setFormMode(target) {
   document.getElementById('modal-title').textContent = target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre';
   document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : 'Envoyer la proposition';
   document.getElementById('admin-fields').style.display = target === 'propose' ? 'none' : '';
+  document.getElementById('row-poi').style.display = target === 'propose' && isAdminUser ? '' : 'none';
   const pb = document.getElementById('btn-photo');
   pb.textContent = '📷 Prendre / choisir une photo';
   pb.disabled = false;
@@ -364,6 +383,10 @@ function collectFormValues() {
   if (addModeTarget !== 'propose') {
     const j = parseInt(document.getElementById('f-jour').value, 10);
     if (j === 1 || j === 2) props.jour = j;
+  }
+  if (addModeTarget === 'propose') {
+    const poi = val('f-poi');
+    if (poi && POI[poi]) props.poi = poi;
   }
   if (addModeTarget !== 'propose' && val('f-ramassage')) props.ramassage = val('f-ramassage');
   return props;
@@ -449,9 +472,11 @@ async function proposeFeature(props) {
     return;
   }
   const p = props;
+  const isPoi = isAdminUser && p.poi;
   const [lng, lat] = pendingCoords;
   const { error } = await sb.from('arbres').insert({
-    nom: p.nom,
+    nom: isPoi ? (POI[p.poi] || {}).label || p.poi : p.nom,
+    poi: isPoi ? p.poi : null,
     type: p.type,
     production: p.production,
     etat: p.etat,
@@ -466,7 +491,7 @@ async function proposeFeature(props) {
     ramassage: p.ramassage || null,
     lng,
     lat,
-    statut: 'attente',
+    statut: isPoi ? 'valide' : 'attente',
   });
   if (error) {
     hideModal();
@@ -481,6 +506,7 @@ async function proposeFeature(props) {
     map.panTo([lat, lng]);
     await load();
     if (typeof loadAdminPanel === 'function') loadAdminPanel();
+    if (isPoi) { toast(`📍 ${esc((POI[p.poi] || {}).label || p.poi)} ajouté à la carte.`); return; }
     toast(`🫒 Proposition « <b>${esc(p.nom)}</b> » enregistrée — visible sur la carte (en pointillés) jusqu'à validation.`, false);
   } else {
     toast(`🙏 Merci ! La proposition « <b>${esc(p.nom)}</b> » attend la validation.`, false);
@@ -507,7 +533,8 @@ map.on('click', (e) => {
 document.getElementById('tree-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const props = collectFormValues();
-  if (!props.nom) {
+  const isPoi = addModeTarget === 'propose' && isAdminUser && props.poi;
+  if (!props.nom && !isPoi) {
     const err = document.getElementById('form-err');
     err.textContent = 'Le nom est obligatoire.';
     err.classList.add('visible');
