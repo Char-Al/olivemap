@@ -238,6 +238,23 @@ create policy "admins gèrent les pois"
 grant select on public.pois to anon, authenticated;
 grant insert, update, delete on public.pois to authenticated;
 
+-- Reprise des anciens points logistiques stockés dans « arbres » (si la colonne existe encore)
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'arbres' and column_name = 'poi'
+  ) then
+    insert into public.pois (type, lat, lng)
+    select a.poi, a.lat, a.lng from public.arbres a
+    where a.poi is not null
+      and not exists (
+        select 1 from public.pois p
+        where p.type = a.poi and p.lat = a.lat and p.lng = a.lng
+      );
+  end if;
+end $$;
+
 -- Les points logistiques ne vivent plus dans la table arbres :
 alter table public.arbres drop column if exists poi;
 
