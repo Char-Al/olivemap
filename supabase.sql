@@ -293,4 +293,18 @@ update public.jours set date = nullif((select valeur from public.infos where cle
   where numero = 2 and date is null;
 
 -- La date ne vit plus sur l'arbre :
+-- (la policy d'insertion publique qui référençait « ramassage » est
+--  recréée ici pour que ce bloc marche aussi seul)
+do $$
+begin
+  drop policy if exists "proposition publique sans date de ramassage" on public.arbres;
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'arbres'
+      and policyname = 'proposition publique sans date ni jour'
+  ) then
+    execute 'create policy "proposition publique sans date ni jour" on public.arbres for insert to anon with check (statut = ''attente'' and jour is null and lat between 43.83 and 43.90 and lng between 3.86 and 3.95)';
+  end if;
+end $$;
+
 alter table public.arbres drop column if exists ramassage;
