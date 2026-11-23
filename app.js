@@ -372,8 +372,48 @@ function toggleAdd(on) {
   document.getElementById('map').style.cursor = addMode ? 'crosshair' : '';
 }
 let addModeTarget = 'propose';
-const btnPropose = document.getElementById('btn-propose');
-btnPropose.addEventListener('click', () => { addModeTarget = 'propose'; addBadge.textContent = "Cliquez sur la carte pour choisir l'emplacement \u2014 annuler"; toggleAdd(); });
+
+function beginAddAt(latlng) {
+  if (placingPoi) return;
+  if (!inClaret(latlng.lng, latlng.lat)) {
+    toast('⚠️ Hors du territoire de Claret — les propositions sont limitées au village.', false);
+    return;
+  }
+  pendingCoords = [latlng.lng, latlng.lat];
+  addModeTarget = 'propose';
+  setFormMode('propose');
+  document.getElementById('coords').textContent = `[${latlng.lng.toFixed(6)}, ${latlng.lat.toFixed(6)}]`;
+  document.getElementById('form-err').classList.remove('visible');
+  showStep('form');
+}
+
+const LONG_PRESS_MS = 500;
+let pressTimer = null;
+let pressStart = null;
+const mapEl = document.getElementById('map');
+
+function cancelPress() {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  pressStart = null;
+}
+
+mapEl.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse') return;
+  const rect = mapEl.getBoundingClientRect();
+  const cp = L.point(e.clientX - rect.left, e.clientY - rect.top);
+  pressStart = [e.clientX, e.clientY];
+  pressTimer = setTimeout(() => {
+    pressTimer = null;
+    beginAddAt(map.containerPointToLatLng(cp));
+  }, LONG_PRESS_MS);
+});
+mapEl.addEventListener('pointermove', (e) => {
+  if (!pressTimer || !pressStart) return;
+  if (Math.hypot(e.clientX - pressStart[0], e.clientY - pressStart[1]) > 10) cancelPress();
+});
+mapEl.addEventListener('pointerup', cancelPress);
+mapEl.addEventListener('pointercancel', cancelPress);
+map.on('contextmenu', (e) => beginAddAt(e.latlng));
 addBadge.addEventListener('click', () => {
   if (placingPoi) {
     placingPoi = false;
@@ -674,18 +714,6 @@ map.on('click', async (e) => {
     showStep('poi');
     return;
   }
-  if (!addMode) return;
-  if (!inClaret(e.latlng.lng, e.latlng.lat)) {
-    toggleAdd(false);
-    toast(`⚠️ Trop loin du village — les propositions sont limitées au territoire de Claret.`, false);
-    return;
-  }
-  toggleAdd(false);
-  pendingCoords = [e.latlng.lng, e.latlng.lat];
-  setFormMode(addModeTarget);
-  document.getElementById('coords').textContent = `[${e.latlng.lng.toFixed(6)}, ${e.latlng.lat.toFixed(6)}]`;
-  document.getElementById('form-err').classList.remove('visible');
-  showStep('form');
 });
 
 document.getElementById('tree-form').addEventListener('submit', (e) => {

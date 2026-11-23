@@ -19,7 +19,10 @@ html, body {
   overscroll-behavior: none;
 }
 
-#map { position: absolute; inset: 0; background: var(--bg); }
+#map {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none; position: absolute; inset: 0; background: var(--bg); }
 
 /* ---- Barre supérieure ---- */
 .topbar {
