@@ -324,10 +324,9 @@ addBadge.addEventListener('click', () => {
 
 let poiMarkers = [];
 let placingPoi = false;
-let poiType = 'eau';
 
 function fillPoiType() {
-  const sel = document.getElementById('poi-type');
+  const sel = document.getElementById('p-type');
   if (!sel || sel.options.length) return;
   sel.innerHTML = Object.entries(POI).map(([k, v]) => `<option value="${k}">${v.emoji} ${esc(v.label)}</option>`).join('');
 }
@@ -390,7 +389,7 @@ async function loadPoisAdmin() {
   const { data, error } = await sb.from('pois').select('id, type').order('cree_le');
   if (error) { list.innerHTML = '<div class="hint">\u26a0\ufe0f ' + error.message + '</div>'; return; }
   if (!data || !data.length) {
-    list.innerHTML = '<div class="hint">Aucun point logistique. Choisis un type et place-le sur la carte.</div>';
+    list.innerHTML = '<div class="hint">Aucun point logistique. Utilise le bouton 📌 de la barre du haut pour en placer un.</div>';
     return;
   }
   list.innerHTML = data.map((p) => {
@@ -408,15 +407,31 @@ async function loadPoisAdmin() {
   });
 }
 
-document.getElementById('btn-poi-add').addEventListener('click', () => {
-  placingPoi = !placingPoi;
-  poiType = document.getElementById('poi-type').value;
-  addBadge.classList.toggle('visible', placingPoi);
-  document.getElementById('map').style.cursor = placingPoi ? 'crosshair' : '';
-  if (placingPoi) {
-    addBadge.textContent = `📍 Cliquez sur la carte pour placer \u00ab ${(POI[poiType] || {}).label || poiType} \u00bb \u2014 annuler`;
-    toast('📍 Clique sur la carte pour placer ce point logistique.', false);
-  }
+document.getElementById('btn-poi').addEventListener('click', () => {
+  if (!isAdminUser) { toast('⛔ Réservé aux administrateurs.', false); return; }
+  fillPoiType();
+  placingPoi = true;
+  addBadge.classList.add('visible');
+  addBadge.textContent = '📌 Cliquez sur la carte pour placer le point logistique — annuler';
+  document.getElementById('map').style.cursor = 'crosshair';
+  toast('📌 Clique sur la carte pour placer un point logistique.', false);
+});
+
+document.getElementById('btn-poi-confirm').addEventListener('click', async () => {
+  if (!pendingPoi) { hideModal(); return; }
+  const t = document.getElementById('p-type').value;
+  const info = POI[t] || {};
+  const { error } = await sb.from('pois').insert({ type: t, lng: pendingPoi[0], lat: pendingPoi[1] });
+  pendingPoi = null;
+  hideModal();
+  if (error) { toast('⚠️ ' + error.message, false); return; }
+  toast(`📌 ${esc(info.label || t)} ajouté à la carte.`);
+  loadPois();
+});
+
+document.getElementById('btn-poi-cancel').addEventListener('click', () => {
+  pendingPoi = null;
+  hideModal();
 });
 
 function setFormMode(target) {
@@ -430,7 +445,7 @@ function setFormMode(target) {
 }
 
 function showStep(name) {
-  ['form', 'login', 'admin'].forEach((s) => {
+  ['form', 'login', 'admin', 'poi'].forEach((s) => {
     document.getElementById(`step-${s}`).classList.toggle('visible', s === name);
   });
   document.getElementById('modal-overlay').classList.add('visible');
@@ -577,6 +592,7 @@ async function proposeFeature(props) {
 }
 
 let pendingCoords = null;
+let pendingPoi = null;
 
 map.on('click', async (e) => {
   if (placingPoi) {
@@ -587,11 +603,10 @@ map.on('click', async (e) => {
     placingPoi = false;
     addBadge.classList.remove('visible');
     document.getElementById('map').style.cursor = '';
-    const info = POI[poiType] || {};
-    const { error } = await sb.from('pois').insert({ type: poiType, lng: e.latlng.lng, lat: e.latlng.lat });
-    if (error) { toast('\u26a0\ufe0f ' + error.message, false); return; }
-    toast(`📍 ${esc(info.label || poiType)} ajout\u00e9 \u00e0 la carte.`);
-    loadPois();
+    pendingPoi = [e.latlng.lng, e.latlng.lat];
+    document.getElementById('poi-coords').textContent = `[${e.latlng.lng.toFixed(6)}, ${e.latlng.lat.toFixed(6)}]`;
+    document.getElementById('p-type').value = 'eau';
+    showStep('poi');
     return;
   }
   if (!addMode) return;
@@ -706,6 +721,8 @@ async function refreshAdminState() {
   b.title = isAdminUser ? `Espace admin (${pseudoOf(currentEmail)})` : 'Espace admin';
   const lp = document.getElementById('legend-pending');
   if (lp) lp.style.display = isAdminUser ? 'flex' : 'none';
+  const bp = document.getElementById('btn-poi');
+  if (bp) bp.style.display = isAdminUser ? '' : 'none';
   return isAdminUser;
 }
 
@@ -959,7 +976,6 @@ async function loadAdminPanel() {
   evAdm.style.display = isAdminUser ? '' : 'none';
   document.getElementById('sheet-admin').style.display = isAdminUser ? '' : 'none';
   document.getElementById('poi-admin').style.display = isAdminUser ? '' : 'none';
-  fillPoiType();
   if (isAdminUser) {
     const et = document.getElementById('event-text');
     const { data: infoRows } = await sb.from('infos').select('cle, valeur').eq('cle', 'rdv');

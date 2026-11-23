@@ -24,6 +24,7 @@
       <div id="jour-filters" class="day-filters"></div>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
       <button id="btn-install" class="btn" title="Installer Olivemap sur ton appareil" style="display:none">📲 Installer</button>
+      <button id="btn-poi" class="btn" title="Placer un point logistique (admins)" style="display:none">📍</button>
       <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
       <button id="btn-admin" class="btn" title="Espace admin">👑</button>
     </div>
@@ -126,6 +127,17 @@
         </form>
       </div>
 
+      <div class="step" id="step-poi">
+        <h2>📍 Point logistique</h2>
+        <div class="coords-line" id="poi-coords"></div>
+        <label>Type de point</label>
+        <select id="p-type"></select>
+        <div class="modal-actions">
+          <button type="button" class="ghost" id="btn-poi-cancel">Annuler</button>
+          <button type="button" class="primary" id="btn-poi-confirm">Ajouter le point</button>
+        </div>
+      </div>
+
       <div class="step" id="step-login">
         <h2>👑 Espace admin</h2>
         <p class="hint">Connecte-toi avec ton identifiant et ton mot de passe. Ton identifiant doit figurer dans la liste des administrateurs.</p>
@@ -158,10 +170,6 @@
         </div>
         <div id="poi-admin" style="display:none">
           <h3>Points logistiques</h3>
-          <div class="modal-actions" style="margin-top:6px">
-            <select id="poi-type" class="mini"></select>
-            <button type="button" class="mini edit" id="btn-poi-add">📍 Placer sur la carte</button>
-          </div>
           <div id="poi-list"></div>
         </div>
         <h3>Demandes en attente</h3>
