@@ -991,6 +991,23 @@ function updateJourSummary() {
   });
 }
 
+function setWidgetsVisible(v) {
+  const inner = document.getElementById('widgets-inner');
+  const btn = document.getElementById('widgets-toggle');
+  if (!inner || !btn) return;
+  inner.style.display = v ? 'flex' : 'none';
+  btn.textContent = v ? '\u2715' : '🗓 ⛅';
+  btn.title = v ? 'Masquer la m\u00e9t\u00e9o et le r\u00e9sum\u00e9 des jours' : 'Afficher la m\u00e9t\u00e9o et le r\u00e9sum\u00e9 des jours';
+  localStorage.setItem('olivemap_widgets', v ? '1' : '0');
+}
+
+document.getElementById('widgets-toggle').addEventListener('click', () => {
+  const inner = document.getElementById('widgets-inner');
+  setWidgetsVisible(inner.style.display === 'none');
+});
+
+setWidgetsVisible(localStorage.getItem('olivemap_widgets') !== '0');
+
 async function loadJourSummary() {
   if (!sb) return;
   const { data } = await sb.from('participations').select('arbre_id, nb_personnes, apporte');
