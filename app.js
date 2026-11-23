@@ -971,6 +971,31 @@ function renderJourFilters() {
   });
 }
 
+async function shareMap() {
+  const url = location.origin + location.pathname;
+  const text = '\U0001FADA Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective';
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Olivmap', text, url }); } catch (e) { /* partage annul\u00e9 */ }
+    return;
+  }
+  try { await navigator.clipboard.writeText(url); toast('\U0001F517 Lien copi\u00e9 \u2014 colle-le dans ta messagerie.'); }
+  catch (e) { toast(url, false); }
+}
+
+function renderQr() {
+  const box = document.getElementById('qr-box');
+  if (!box) return;
+  box.innerHTML = '';
+  try {
+    const q = qrcode(0, 'M');
+    q.addData(location.origin + location.pathname);
+    q.make();
+    box.innerHTML = q.createImgTag(3, 6);
+  } catch (e) {
+    box.innerHTML = '<div class="hint">\u26a0\ufe0f QR indisponible hors connexion \u2014 recharge la page une fois en ligne.</div>';
+  }
+}
+
 let jourPartic = [];
 
 function jourSupplyFor(rows) {
@@ -1035,6 +1060,18 @@ document.getElementById('widgets-toggle').addEventListener('click', () => {
 
 setWidgetsVisible(localStorage.getItem('olivemap_widgets') !== '0');
 setLegendFolded(localStorage.getItem('olivemap_legend') === '1');
+document.getElementById('btn-share').addEventListener('click', shareMap);
+
+document.getElementById('btn-share-wa').addEventListener('click', () => {
+  const url = location.origin + location.pathname;
+  const text = '\U0001FADA Olivemap \u2014 la carte des oliviers de Claret pour la cueillette collective : ' + url;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+});
+
+document.getElementById('btn-share-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(location.origin + location.pathname); toast('\U0001F517 Lien copi\u00e9.'); }
+  catch (e) { toast(location.origin + location.pathname, false); }
+});
 (function () {
   const ic = document.getElementById('intro-card');
   if (!ic || localStorage.getItem('olivemap_intro') === '1') return;
@@ -1156,6 +1193,7 @@ async function loadAdminPanel() {
   evAdm.style.display = isAdminUser ? '' : 'none';
   document.getElementById('sheet-admin').style.display = isAdminUser ? '' : 'none';
   document.getElementById('poi-admin').style.display = isAdminUser ? '' : 'none';
+  document.getElementById('share-admin').style.display = isAdminUser ? '' : 'none';
   if (isAdminUser) {
     const et = document.getElementById('event-text');
     const { data: infoRows } = await sb.from('infos').select('cle, valeur').eq('cle', 'rdv');
@@ -1167,6 +1205,7 @@ async function loadAdminPanel() {
     renderJourFilters();
     renderSheetButtons();
     loadPoisAdmin();
+    renderQr();
   }
   const pl = document.getElementById('pending-list');
   const al = document.getElementById('admins-list');
