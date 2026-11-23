@@ -138,6 +138,7 @@ function visibleFeatures() {
   const showM = document.getElementById('legend-mairie').classList.contains('active');
   const showP = document.getElementById('legend-particulier').classList.contains('active');
   const op = document.getElementById('btn-filter-open').classList.contains('active');
+  if (poiOnly) return [];
   return allFeatures.filter((f) => {
     const p = f.properties || {};
     if (p.type === 'mairie' && !showM) return false;
@@ -224,8 +225,9 @@ function render() {
     markers.push({ marker, f });
     marker.addTo(map);
   });
-  document.getElementById('counter').innerHTML =
-    `<b>${feats.length}</b>/${allFeatures.length}`;
+  document.getElementById('counter').innerHTML = poiOnly
+    ? `<b>📍</b> ${poiMarkers.length} point${poiMarkers.length > 1 ? 's' : ''}`
+    : `<b>${feats.length}</b>/${allFeatures.length}`;
   renderJourFilters();
 }
 
@@ -292,6 +294,13 @@ document.getElementById('legend-mairie').addEventListener('click', () => {
   document.getElementById('legend-mairie').classList.toggle('active');
   render();
 });
+let poiOnly = false;
+document.getElementById('legend-poi').addEventListener('click', () => {
+  poiOnly = !poiOnly;
+  document.getElementById('legend-poi').classList.toggle('active', poiOnly);
+  render();
+});
+
 document.getElementById('btn-filter-open').addEventListener('click', () => {
   document.getElementById('btn-filter-open').classList.toggle('active');
   render();
