@@ -836,10 +836,9 @@ function jourPos(row) { return ordonneJours().indexOf(row) + 1; }
 
 async function loadJours() {
   if (!sb) return;
-  const keep = ({ numero, date }) => ({ numero, date });
-  const saved = joursRows.map(keep);
+  const saved = joursRows.filter((j) => j._new).map((j) => ({ numero: j.numero, date: j.date, _new: true }));
   const { data, error } = await sb.from('jours').select('numero, date').order('numero');
-  if (!error && Array.isArray(data) && data.length) {
+  if (!error && Array.isArray(data)) {
     joursRows = data.map((r) => ({ numero: r.numero, date: r.date || null }));
   } else {
     const { data: infoRows } = await sb.from('infos').select('cle, valeur').in('cle', ['jour1', 'jour2']);
@@ -847,8 +846,9 @@ async function loadJours() {
     joursRows = [];
     if (info.jour1) joursRows.push({ numero: 1, date: info.jour1.slice(0, 10) });
     if (info.jour2) joursRows.push({ numero: 2, date: info.jour2.slice(0, 10) });
-    if (saved.length && saved.some((j) => j.date)) joursRows = saved;
   }
+  const dbNums = new Set(joursRows.map((j) => j.numero));
+  joursRows = joursRows.concat(saved.filter((j) => !dbNums.has(j.numero)));
 }
 
 function renderJourFilters() {
@@ -893,7 +893,7 @@ function renderJoursAdmin() {
       `<button type="button" class="mini no" data-jr="${j.numero}" title="Supprimer ce jour">🗑</button>`;
     row.querySelector('[data-jr]').addEventListener('click', () => {
       joursRows = joursRows.filter((x) => x.numero !== j.numero);
-      if (!joursRemoved.includes(j.numero)) joursRemoved.push(j.numero);
+      if (!j._new && !joursRemoved.includes(j.numero)) joursRemoved.push(j.numero);
       renderJoursAdmin();
       fillJourSelect();
     });
@@ -918,7 +918,7 @@ function renderSheetButtons() {
 
 document.getElementById('btn-jour-add').addEventListener('click', () => {
   const n = joursRows.reduce((m, j) => Math.max(m, j.numero), 0) + 1;
-  joursRows.push({ numero: n, date: null });
+  joursRows.push({ numero: n, date: null, _new: true });
   renderJoursAdmin();
   fillJourSelect();
 });
