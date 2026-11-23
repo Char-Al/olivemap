@@ -148,3 +148,18 @@ Si tu ne touches à rien d'autre, la carte se recadre automatiquement sur tes po
 ## 🛠️ Stack
 
 HTML (`index.html`) / CSS (`styles.css`) / JS (`app.js`) vanilla + [Leaflet](https://leafletjs.com/) (CDN) + tuiles OpenStreetMap. Aucun build, aucune dépendance à installer, aucune clé API.
+
+## 📜 Licence
+
+Copyright (c) 2026 Char-Al (https://github.com/Char-Al)
+
+**Required Notice: Copyright (c) 2026 Char-Al (https://github.com/Char-Al)**
+
+Ce projet est sous licence [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — texte complet dans [LICENSE](LICENSE).
+
+- ✅ usage personnel, associatif, éducatif, environnemental et non commercial
+- ✅ copie, modification et redistribution pour ces usages, en conservant la mention ci-dessus
+- ❌ toute utilisation commerciale (vente, service payant, usage lucratif…)
+
+La licence couvre le code et les données du dépôt. Les tuiles © contributeurs [OpenStreetMap](https://www.openstreetmap.org/copyright) et le contour communal [IGN ADMIN EXPRESS](https://geoservices.ign.fr/) restent soumis à leurs licences respectives.
+
