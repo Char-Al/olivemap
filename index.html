@@ -23,6 +23,7 @@
       <button id="btn-filter-open" class="btn" title="Ne montrer que les arbres pas encore ramassés">🚚 À ramasser</button>
       <div id="jour-filters" class="day-filters"></div>
       <button id="btn-locate" class="btn" title="Me localiser">📍</button>
+      <button id="btn-share" class="btn" title="Partager la carte">📲</button>
       <button id="btn-install" class="btn" title="Installer Olivemap sur ton appareil" style="display:none">📲 Installer</button>
       <button id="btn-poi" class="btn" title="Placer un point logistique (admins)" style="display:none">📍</button>
       <button id="btn-propose" class="btn" title="Proposer un arbre (public)">🙋</button>
@@ -189,6 +190,14 @@
           <h3>Points logistiques</h3>
           <div id="poi-list"></div>
         </div>
+        <div id="share-admin" style="display:none">
+          <h3>Partager la carte</h3>
+          <div class="qr-box" id="qr-box"></div>
+          <div class="modal-actions" style="margin-top:6px">
+            <button type="button" class="mini edit" id="btn-share-wa">📲 Lien WhatsApp</button>
+            <button type="button" class="mini edit" id="btn-share-copy">🔗 Copier le lien</button>
+          </div>
+        </div>
         <h3>Demandes en attente</h3>
         <div id="pending-list"></div>
         <h3>Arbres recensés</h3>
@@ -209,6 +218,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
   <script src="app.js"></script>
 
 </body>
