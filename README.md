@@ -161,5 +161,7 @@ Ce projet est sous licence [PolyForm Noncommercial 1.0.0](https://polyformprojec
 - ✅ copie, modification et redistribution pour ces usages, en conservant la mention ci-dessus
 - ❌ toute utilisation commerciale (vente, service payant, usage lucratif…)
 
+Détail des licences des composants : [CREDITS.md](CREDITS.md).
+
 La licence couvre le code et les données du dépôt. Les tuiles © contributeurs [OpenStreetMap](https://www.openstreetmap.org/copyright) et le contour communal [IGN ADMIN EXPRESS](https://geoservices.ign.fr/) restent soumis à leurs licences respectives.
 
