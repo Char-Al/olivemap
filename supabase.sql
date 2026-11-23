@@ -19,7 +19,6 @@ create table if not exists public.arbres (
   notes text,
   kids_friendly boolean not null default false,
   acces_pieton boolean not null default false,
-  ramassage timestamptz,
   lng double precision not null,
   lat double precision not null,
   statut text not null default 'attente' check (statut in ('attente','valide','rejete'))
@@ -27,8 +26,7 @@ create table if not exists public.arbres (
 
 alter table public.arbres
   add column if not exists kids_friendly boolean not null default false,
-  add column if not exists acces_pieton boolean not null default false,
-  add column if not exists ramassage timestamptz;
+  add column if not exists acces_pieton boolean not null default false;
 
 -- ============================================================
 -- 2) Table des administrateurs (emails autorisés)
@@ -63,6 +61,7 @@ drop policy if exists "lecture publique des arbres valides" on public.arbres;
 drop policy if exists "proposition publique d'un arbre" on public.arbres;
 drop policy if exists "lecture des arbres valides ou par un admin" on public.arbres;
 drop policy if exists "proposition publique sans date de ramassage" on public.arbres;
+drop policy if exists "proposition publique sans date ni jour" on public.arbres;
 drop policy if exists "creation d'arbres valides par les admins" on public.arbres;
 drop policy if exists "un admin met à jour les arbres" on public.arbres;
 drop policy if exists "un admin supprime les arbres" on public.arbres;
@@ -71,10 +70,11 @@ create policy "lecture des arbres valides ou par un admin"
   on public.arbres for select
   using (statut = 'valide' or public.is_admin());
 
-create policy "proposition publique sans date de ramassage"
+create policy "proposition publique sans date ni jour"
   on public.arbres for insert
+  to anon
   with check (
-    statut = 'attente' and ramassage is null
+    statut = 'attente' and jour is null
     and lat between 43.83 and 43.90
     and lng between 3.86 and 3.95
   );
