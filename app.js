@@ -501,6 +501,8 @@ function setFormMode(target) {
   document.getElementById('modal-title').textContent = target === 'edit' ? '✏️ Modifier l’arbre' : '🙋 Proposer un arbre';
   document.getElementById('btn-submit-form').textContent = target === 'edit' ? 'Enregistrer' : 'Envoyer la proposition';
   document.getElementById('admin-fields').style.display = target === 'propose' ? 'none' : '';
+  const det = document.getElementById('form-details');
+  if (det) det.open = target === 'edit' || isAdminUser;
   const pb = document.getElementById('btn-photo');
   pb.textContent = '📷 Prendre / choisir une photo';
   pb.disabled = false;
