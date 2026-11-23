@@ -413,6 +413,7 @@ if (btnChoicePoi) btnChoicePoi.addEventListener('click', () => {
 const LONG_PRESS_MS = 500;
 let pressTimer = null;
 let pressStart = null;
+let touchPointers = 0;
 const mapEl = document.getElementById('map');
 
 function cancelPress() {
@@ -422,6 +423,8 @@ function cancelPress() {
 
 mapEl.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'mouse') return;
+  touchPointers++;
+  if (touchPointers > 1) { cancelPress(); return; }
   const rect = mapEl.getBoundingClientRect();
   const cp = L.point(e.clientX - rect.left, e.clientY - rect.top);
   pressStart = [e.clientX, e.clientY];
@@ -434,8 +437,14 @@ mapEl.addEventListener('pointermove', (e) => {
   if (!pressTimer || !pressStart) return;
   if (Math.hypot(e.clientX - pressStart[0], e.clientY - pressStart[1]) > 10) cancelPress();
 });
-mapEl.addEventListener('pointerup', cancelPress);
-mapEl.addEventListener('pointercancel', cancelPress);
+mapEl.addEventListener('pointerup', (e) => {
+  if (touchPointers > 0) touchPointers--;
+  cancelPress();
+});
+mapEl.addEventListener('pointercancel', (e) => {
+  if (touchPointers > 0) touchPointers--;
+  cancelPress();
+});
 map.on('contextmenu', (e) => beginAddAt(e.latlng));
 addBadge.addEventListener('click', () => {
   if (placingPoi) {
