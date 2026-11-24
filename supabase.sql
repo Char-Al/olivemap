@@ -303,3 +303,11 @@ begin
 end $$;
 
 alter table public.arbres drop column if exists ramassage;
+
+-- ============================================================
+-- 13) PAS DE CUEILLETTE CETTE ANNEE
+--     arbre au repos, malade ou accord prive avec le proprietaire
+--     (re-executable : idempotent)
+-- ============================================================
+alter table public.arbres
+  add column if not exists pas_cueillette boolean;
