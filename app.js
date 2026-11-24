@@ -1127,7 +1127,7 @@ function renderTreeView() {
     lst.forEach((f) => {
       const p = f.properties || {};
       const row = document.createElement('div');
-      row.className = 'list-row' + (p.ramasse ? ' done' : '') + (p.statut === 'attente' ? ' pending' : '');
+      row.className = 'list-row' + (p.ramasse ? ' done' : '') + (p.pas_cueillette ? ' skip' : '') + (p.statut === 'attente' ? ' pending' : '');
       row.title = 'Voir cet arbre sur la carte';
       row.innerHTML = `<span class="lr-name">${p.statut === 'attente' ? '\u23f3 ' : ''}${esc(p.nom || 'Arbre')}</span>` +
         `${ownerBadge(p.type) || ''}` +
