@@ -174,7 +174,7 @@ function visibleFeatures() {
     if (dayFilter && p.jour !== dayFilter) return false;
     if (op) {
       if (p.statut === 'attente') return false;
-      if (p.ramasse) return false;
+      if (p.ramasse || p.pas_cueillette) return false;
     }
     return true;
   });
@@ -1132,7 +1132,7 @@ function renderTreeView() {
       row.innerHTML = `<span class="lr-name">${p.statut === 'attente' ? '\u23f3 ' : ''}${esc(p.nom || 'Arbre')}</span>` +
         `${ownerBadge(p.type) || ''}` +
         `${p.production ? productionDots(p.production) : ''}` +
-        `${p.ramasse ? '\u2705' : '\u2b1c'}`;
+        `${p.ramasse ? '\u2705' : (p.pas_cueillette ? '🚫' : '\u2b1c')}`;
       if (p.id) row.addEventListener('click', () => { hideModal(); openTreeById(p.id); });
       g.appendChild(row);
     });
@@ -1163,7 +1163,7 @@ function updateJourSummary() {
     const supply = jourSupplyFor(parts);
     const need = { echelle: 0, caisses: 0, rateau: 0, bache: 0 };
     trees.forEach((p) => {
-      if (p.ramasse) return;
+      if (p.ramasse || p.pas_cueillette) return;
       if (p.besoin_echelle) need.echelle += 1;
       if (p.besoin_caisses) need.caisses += 1;
       if (p.besoin_rateau) need.rateau += 1;
@@ -1522,7 +1522,7 @@ document.getElementById('btn-signout').addEventListener('click', async () => {
 });
 
 async function printSheet(day) {
-  const trees = allFeatures.map((f) => f.properties || {}).filter((p) => p.id && p.statut === 'valide' && p.jour === day);
+  const trees = allFeatures.map((f) => f.properties || {}).filter((p) => p.id && p.statut === 'valide' && !p.pas_cueillette && p.jour === day);
   const parts = {};
   if (sb && trees.length) {
     const { data } = await sb.from('participations').select('arbre_id, pseudo, nb_personnes, apporte');

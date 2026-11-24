@@ -117,6 +117,7 @@ Structure d'une entrée :
 - `kids_friendly` : `true` si l'arbre est adapté aux enfants (affiché 👶 dans le popup)
 - `acces_pieton` : `true` si l'accès est piéton uniquement (affiché 🚶 dans le popup)
 - `jour` : numéro du jour de cueillette auquel l'arbre est rattaché (saisi par un admin) — affiché dans le popup avec la date du jour
+- `pas_cueillette` : `true` si l'arbre est au repos cette année (exclu de la cueillette) — voir la section Jours de cueillette
 - `etat` accepte : `bon`, `moyen`, `mauvais` (ou ton propre texte)
 - Pour une photo : héberge-la (p. ex. dans un dossier `photos/` du dépôt) et mets son URL
 
@@ -136,6 +137,7 @@ Les **jours de cueillette** sont créés par les admins (autant que nécessaire,
 - **Partage** : bouton 🔗 Partager l'arbre dans le popup → lien direct `?arbre=<id>` qui ouvre la carte centrée sur l'arbre ; bouton 🧭 Itinéraire → navigation Google Maps.
 - **Points logistiques** (table dédiée `pois`, indépendante des arbres) : dans le panneau admin, choisis un type (eau 💧, WC 🚻, parking 🚗, accueil 🏠, pesée ⚖️) puis « 📍 Placer sur la carte » et clique à l'endroit voulu ; suppression par la liste ou le popup.
 - **Suivi d'avancement** : dans le popup admin, ✔️ Ramassé / ↩️ À faire fait tourner les compteurs des boutons Jour (4/7) ; les arbres faits ont un anneau vert.
+- **Pas de cueillette cette année** : dans le popup admin, 🚫 « Pas cette année » met l'arbre au repos (malade, réserve ou accord privé) — anneau orange sur le marqueur, 🚫 dans le tooltip et le popup, colonne `pas_cueillette` en base. L'arbre est **exclu du filtre 🚮 À ramasser**, de la **feuille de cueillette imprimable** et du **compte de matériel manquant** des résumés de jour ; le bouton devient « ✅ Reprise cueillette » pour revenir en arrière.
 - **Jour J** : quand la date d'un jour correspond à aujourd'hui, le filtre de ce jour s'active tout seul au chargement (📢 toast).
 - **Feuille d'équipe imprimable** : un bouton 🖨️ par jour dans le panneau admin → liste imprimable des arbres, matériel et volontaires, avec cases à cocher papier.
 
