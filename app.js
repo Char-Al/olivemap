@@ -79,7 +79,7 @@ function markerIcon(props) {
   const prod = Math.min(Math.max(parseInt(props.production, 10) || 1, 1), 3);
   return L.divIcon({
     className: 'tree-marker',
-    html: `<div class="tree-icon${pending ? ' pending' : ''}${props.ramasse ? ' done' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+    html: `<div class="tree-icon${pending ? ' pending' : ''}${props.ramasse ? ' done' : ''}${props.pas_cueillette ? ' no-pick' : ''}"><svg viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
       <path d="M17 2C9.8 2 4 7.8 4 15c0 5.5 3.2 9.4 6.5 12.8L17 44l6.5-16.2C26.8 24.4 30 20.5 30 15 30 7.8 24.2 2 17 2z" fill="#2e3b31" stroke="${color}" stroke-width="2"/>
       <circle cx="17" cy="38" r="2.4" fill="${color}"/>
       ${oliveGlyphs(prod)}
@@ -103,7 +103,7 @@ function ownerBadge(type) {
 function popupHtml(props, coords) {
   const rows = [];
   const actPending = props.statut === 'attente' && isAdminUser;
-  const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="done">${props.ramasse ? '↩️ À faire' : '✔️ Ramassé'}</button><button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
+  const adminRow = (isAdminUser && props.id) ? `<div class="popup-actions"><button class="mini edit" data-act="edit">✏️ Modifier</button>${props.statut === 'valide' ? `<button class="mini edit" data-act="done">${props.ramasse ? '↩️ À faire' : '✔️ Ramassé'}</button>${props.pas_cueillette ? '<button class="mini edit" data-act="reprise">✅ Reprise cueillette</button>' : '<button class="mini no" data-act="nopick">🚫 Pas cette année</button>'}<button class="mini edit" data-act="unval">⏳ Dévalider</button><button class="mini no" data-act="del">🗑 Supprimer</button>` : ''}</div>` : '';
   const geoLink = coords
     ? `<a class="mini edit" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}">🧭 Itinéraire</a>`
     : '';
@@ -128,7 +128,8 @@ function popupHtml(props, coords) {
     const key = String(props.etat).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     tech.push(['État', `<span class="state-badge state-${key}">${stateLabels[key] || esc(props.etat)}</span>`]);
   }
-  if (props.ramasse) rows.push(['Cueillette', '✅ Ramassé']);
+  if (props.pas_cueillette) rows.push(['Cueillette', '🚫 Pas cette année']);
+  else if (props.ramasse) rows.push(['Cueillette', '✅ Ramassé']);
   if (props.jour) rows.push([
     'Jour',
     `${dayEmoji(props.jour)} Jour ${props.jour}${dayDateTxt(props.jour)}`,
@@ -230,7 +231,27 @@ function render() {
           if (isAdminUser) loadAdminPanel();
           openTreeById(f.properties.id);
         });
-        const btnDel = el.querySelector('[data-act="del"]');
+        const btnNopick = el.querySelector('[data-act="nopick"]');
+        if (btnNopick) btnNopick.addEventListener('click', async () => {
+          const { error } = await sb.from('arbres').update({ pas_cueillette: true }).eq('id', f.properties.id);
+          if (error) { toast('⚠️ ' + error.message, false); return; }
+          marker.closePopup();
+          toast(`🚫 « ${esc(f.properties.nom)} » — pas de cueillette cette année.`);
+          await load();
+          if (isAdminUser) loadAdminPanel();
+          openTreeById(f.properties.id);
+        });
+        const btnReprise = el.querySelector('[data-act="reprise"]');
+        if (btnReprise) btnReprise.addEventListener('click', async () => {
+          const { error } = await sb.from('arbres').update({ pas_cueillette: false }).eq('id', f.properties.id);
+          if (error) { toast('⚠️ ' + error.message, false); return; }
+          marker.closePopup();
+          toast(`✅ « ${esc(f.properties.nom)} » de nouveau à la cueillette.`);
+          await load();
+          if (isAdminUser) loadAdminPanel();
+          openTreeById(f.properties.id);
+        });
+
         if (btnDel) btnDel.addEventListener('click', async () => {
           const { error } = await sb.from('arbres').delete().eq('id', f.properties.id);
           if (error) { toast('⚠️ ' + error.message, false); return; }
@@ -249,7 +270,7 @@ function render() {
         });
       });
     }
-    marker.bindTooltip(`${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${esc(f.properties.nom || 'Arbre')} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}`, { direction: 'top', offset: [0, -44] });
+    marker.bindTooltip(`${((f.properties || {}).pas_cueillette ? '🚫 ' : '')}${((f.properties || {}).statut === 'attente' ? '⏳ ' : '')}${esc(f.properties.nom || 'Arbre')} ${(f.properties || {}).production ? productionDots(f.properties.production) : ''}`, { direction: 'top', offset: [0, -44] });
     markers.push({ marker, f });
     marker.addTo(map);
   });
@@ -302,7 +323,7 @@ function toast(html, autohide = true) {
 
 function rowToFeature(r) {
   const p = {};
-  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'statut', 'jour', 'ramasse', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache'];
+  const props = ['id', 'nom', 'type', 'production', 'espece', 'hauteur_m', 'circonference_cm', 'annee_plantation', 'etat', 'photo', 'notes', 'kids_friendly', 'acces_pieton', 'statut', 'jour', 'ramasse', 'besoin_echelle', 'besoin_caisses', 'besoin_rateau', 'besoin_bache', 'pas_cueillette'];
   props.forEach((k) => {
     if (r[k] !== null && r[k] !== undefined && r[k] !== '' && r[k] !== false) {
       p[k] = (k === 'hauteur_m' || k === 'circonference_cm') ? Number(r[k]) : r[k];
