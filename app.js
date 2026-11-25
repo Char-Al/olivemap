@@ -251,7 +251,7 @@ function render() {
           if (isAdminUser) loadAdminPanel();
           openTreeById(f.properties.id);
         });
-
+        const btnDel = el.querySelector('[data-act="del"]');
         if (btnDel) btnDel.addEventListener('click', async () => {
           const { error } = await sb.from('arbres').delete().eq('id', f.properties.id);
           if (error) { toast('⚠️ ' + error.message, false); return; }
